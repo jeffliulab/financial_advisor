@@ -1,0 +1,1628 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Financial Advisor</title>
+    <!-- Markdown rendering library -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #ffffff;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+            width: 100%;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 280px;
+            background: #f8fafc;
+            border-right: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .sidebar.collapsed {
+            width: 50px;
+            border-right: 1px solid #e2e8f0;
+            overflow: hidden;
+        }
+
+        .sidebar.collapsed .sidebar-content {
+            display: none;
+        }
+
+        .sidebar.collapsed .sidebar-header {
+            padding: 20px 10px;
+            justify-content: center;
+        }
+
+        .sidebar.collapsed .sidebar-header h2 {
+            display: none;
+        }
+
+        .sidebar.collapsed .sidebar-toggle {
+            margin: 0;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #ffffff;
+        }
+
+        .sidebar-header h2 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .sidebar-toggle {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+            color: #64748b;
+            transition: background-color 0.2s;
+        }
+
+        .sidebar-toggle:hover {
+            background: #f1f5f9;
+        }
+
+        .sidebar-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .sidebar-section {
+            margin-bottom: 32px;
+        }
+
+        .sidebar-section h3 {
+            margin: 0 0 12px 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .section-header h3 {
+            margin: 0;
+        }
+
+        .history-toggle, .close-history {
+            background: none;
+            border: none;
+            color: #64748b;
+            cursor: pointer;
+            padding: 6px 8px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .history-toggle:hover, .close-history:hover {
+            background: #f1f5f9;
+            color: #334155;
+        }
+
+        .history-label {
+            font-size: 11px;
+            font-weight: 500;
+            color: inherit;
+        }
+
+        .chat-item {
+            padding: 8px 12px;
+            margin: 4px 0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+            background: #f8fafc;
+        }
+
+        .chat-item:hover {
+            background: #e2e8f0;
+            border-color: #cbd5e1;
+        }
+
+        .chat-item.active {
+            background: #dbeafe;
+            border-color: #3b82f6;
+            color: #1e40af;
+        }
+
+        .chat-title {
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .chat-time {
+            font-size: 11px;
+            color: #64748b;
+        }
+
+        /* 滚动条样式 */
+        .scrollable-chat-list {
+            max-height: 300px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 4px;
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 #f1f5f9;
+        }
+
+        .scrollable-chat-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .scrollable-chat-list::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+        }
+
+        .scrollable-chat-list::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+            transition: background 0.2s ease;
+        }
+
+        .scrollable-chat-list::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* 当内容较少时隐藏滚动条 */
+        .scrollable-chat-list:not(.has-scroll)::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* 响应式调整 */
+        @media (max-height: 600px) {
+            .scrollable-chat-list {
+                max-height: 200px;
+            }
+        }
+
+        @media (max-height: 400px) {
+            .scrollable-chat-list {
+                max-height: 150px;
+            }
+        }
+
+        .sidebar-button {
+            width: 100%;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            color: #374151;
+            transition: all 0.2s;
+            text-align: left;
+        }
+
+        .sidebar-button:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+
+        .sidebar-button svg {
+            flex-shrink: 0;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            flex: 1;
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+
+
+        /* Chat Container */
+        .chat-container {
+            flex: 1;
+            height: 100vh;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: #ffffff;
+            color: #374151;
+            padding: 16px 24px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-shrink: 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .menu-toggle {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+            color: #64748b;
+            transition: background-color 0.2s;
+            display: block;
+        }
+
+        .menu-toggle:hover {
+            background: #f1f5f9;
+        }
+
+        .header-content {
+            flex: 1;
+        }
+
+        .header-content h1 {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0;
+            color: #111827;
+        }
+
+        .header-content p {
+            font-size: 14px;
+            color: #6b7280;
+            margin: 0;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            background: #f9fafb;
+            padding: 0;
+        }
+
+        .message {
+            display: flex;
+            padding: 24px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .message.user {
+            background: #f9fafb;
+            justify-content: flex-end;
+        }
+
+        .message.assistant {
+            background: #ffffff;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            line-height: 1.6;
+            position: relative;
+        }
+
+        .message.user .message-content {
+            background: #3b82f6;
+            color: white;
+            border-bottom-right-radius: 4px;
+            margin-left: auto;
+            margin-right: 0;
+        }
+
+        .message.assistant .message-content {
+            background: #f3f4f6;
+            color: #374151;
+            border: 1px solid #e5e7eb;
+            border-bottom-left-radius: 4px;
+            margin-left: 0;
+            margin-right: auto;
+        }
+
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            flex-shrink: 0;
+            margin: 0 8px;
+        }
+
+        .message.user .message-avatar {
+            background: #3b82f6;
+            color: white;
+            order: 1;
+        }
+
+        .message.assistant .message-avatar {
+            background: #10a37f;
+            color: white;
+        }
+
+        .chat-input {
+            padding: 24px;
+            background: #ffffff;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            gap: 12px;
+            flex-shrink: 0;
+            box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .input-container {
+            flex: 1;
+            position: relative;
+            max-width: 768px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .chat-input textarea {
+            width: 100%;
+            padding: 12px 48px 12px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 12px;
+            outline: none;
+            font-size: 16px;
+            background: #ffffff;
+            color: #374151;
+            resize: none;
+            min-height: 24px;
+            max-height: 200px;
+            line-height: 1.5;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .chat-input textarea:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .chat-input textarea::placeholder {
+            color: #9ca3af;
+        }
+
+        .send-button {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 32px;
+            height: 32px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+
+        .send-button:hover {
+            background: #2563eb;
+        }
+
+        .send-button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            color: #6b7280;
+            font-style: italic;
+            margin: 10px 0;
+        }
+
+        /* Markdown styles for AI messages */
+        .message.assistant .message-content h1, 
+        .message.assistant .message-content h2, 
+        .message.assistant .message-content h3, 
+        .message.assistant .message-content h4, 
+        .message.assistant .message-content h5, 
+        .message.assistant .message-content h6 {
+            color: #111827;
+            margin: 16px 0 8px 0;
+            font-weight: 600;
+        }
+
+        .message.assistant .message-content h1 { font-size: 24px; }
+        .message.assistant .message-content h2 { font-size: 20px; }
+        .message.assistant .message-content h3 { font-size: 18px; }
+        .message.assistant .message-content h4 { font-size: 16px; }
+
+        .message.assistant .message-content p {
+            margin: 8px 0;
+            line-height: 1.6;
+            color: #374151;
+        }
+
+        .message.assistant .message-content ul, 
+        .message.assistant .message-content ol {
+            margin: 8px 0;
+            padding-left: 24px;
+        }
+
+        .message.assistant .message-content li {
+            margin: 4px 0;
+            color: #374151;
+        }
+
+        .message.assistant .message-content code {
+            background: #f3f4f6;
+            color: #1f2937;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .message.assistant .message-content pre {
+            background: #f3f4f6;
+            color: #1f2937;
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 12px 0;
+            border: 1px solid #e5e7eb;
+        }
+
+        .message.assistant .message-content pre code {
+            background: none;
+            padding: 0;
+            border: none;
+        }
+
+        .message.assistant .message-content blockquote {
+            border-left: 4px solid #3b82f6;
+            margin: 12px 0;
+            padding-left: 16px;
+            color: #6b7280;
+            background: #f9fafb;
+            padding: 12px 16px;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .message.assistant .message-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 12px 0;
+        }
+
+        .message.assistant .message-content th, 
+        .message.assistant .message-content td {
+            border: 1px solid #d1d5db;
+            padding: 8px 12px;
+            text-align: left;
+        }
+
+        .message.assistant .message-content th {
+            background: #f3f4f6;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .message.assistant .message-content a {
+            color: #3b82f6;
+            text-decoration: none;
+        }
+
+        .message.assistant .message-content a:hover {
+            text-decoration: underline;
+        }
+
+        .message.assistant .message-content strong {
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .message.assistant .message-content em {
+            font-style: italic;
+        }
+
+        .welcome-message {
+            text-align: center;
+            color: #6b7280;
+            margin: 60px 0;
+            padding: 0 24px;
+        }
+
+        .welcome-message h3 {
+            margin-bottom: 16px;
+            color: #111827;
+            font-size: 24px;
+        }
+
+        .welcome-message p {
+            margin-bottom: 8px;
+            font-size: 16px;
+            color: #6b7280;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                z-index: 1000;
+                box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+                width: 280px;
+            }
+
+            .sidebar.collapsed {
+                transform: translateX(-100%);
+                width: 280px;
+            }
+
+            .chat-container {
+                width: 100%;
+            }
+        }
+
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            margin: 20px;
+        }
+
+        .auth-form h2 {
+            margin: 0 0 8px 0;
+            font-size: 24px;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .auth-form p {
+            margin: 0 0 24px 0;
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: #374151;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .auth-button {
+            width: 100%;
+            padding: 12px 16px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-bottom: 16px;
+        }
+
+        .auth-button:hover {
+            background: #2563eb;
+        }
+
+        .auth-switch {
+            text-align: center;
+            font-size: 14px;
+            color: #6b7280;
+        }
+
+        .auth-switch a {
+            color: #3b82f6;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .auth-switch a:hover {
+            text-decoration: underline;
+        }
+
+        /* Error Message Styles */
+        .error-message {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        /* Chat History Styles */
+        .chat-history-item {
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .chat-history-item:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+
+        .chat-history-item .title {
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 4px;
+        }
+
+        .chat-history-item .date {
+            font-size: 12px;
+            color: #9ca3af;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>Financial Advisor</h2>
+                <button class="sidebar-toggle" id="sidebarToggle">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 6h18M3 12h18M3 18h18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="sidebar-content">
+                <div class="sidebar-section">
+                    <h3>Chat</h3>
+                    <button class="sidebar-button" onclick="goToCurrentChat()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                        Current Chat
+                    </button>
+                    <button class="sidebar-button" onclick="newChat()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 5v14M5 12h14"/>
+                        </svg>
+                        New Chat
+                    </button>
+                </div>
+                <div class="sidebar-section" id="recentChatsSection">
+                    <div class="section-header">
+                        <h3>Recent Chats</h3>
+                        <button class="history-toggle" onclick="toggleChatHistory()" title="View All Chat History">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                                <path d="M21 3v5h-5"/>
+                                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                                <path d="M3 21v-5h5"/>
+                            </svg>
+                            <span class="history-label">History</span>
+                        </button>
+                    </div>
+                    <div id="recentChatsList" class="scrollable-chat-list"></div>
+                </div>
+                <div class="sidebar-section" id="fullChatHistorySection" style="display: none;">
+                    <div class="section-header">
+                        <h3>All Chat History</h3>
+                        <button class="close-history" onclick="toggleChatHistory()" title="Close">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"/>
+                                <line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div id="fullChatHistoryList" class="scrollable-chat-list"></div>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Personal Tools</h3>
+                    <button class="sidebar-button" onclick="doNothing()">
+                        💰 Budget Planner
+                    </button>
+                    <button class="sidebar-button" onclick="doNothing()">
+                        💳 Expense Analyzer
+                    </button>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Context Status</h3>
+                    <div id="contextStatus">
+                        <div class="context-info" style="font-size: 11px; color: #64748b; padding: 8px; background: #f8fafc; border-radius: 4px; margin: 8px 0;">
+                            <div>📝 Context: Smart Mode</div>
+                            <div>🧠 Max Length: 10 messages</div>
+                            <div>📋 Summary: Enabled</div>
+                            <div>🔄 Auto-refresh: Yes</div>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="sidebar-section">
+                    <h3>Account</h3>
+                    <div id="userInfo" style="display: none;">
+                        <p style="font-size: 12px; color: #64748b; margin-bottom: 8px;">Logged in as:</p>
+                        <p id="username" style="font-weight: 600; margin-bottom: 12px;"></p>
+                    </div>
+                    <button class="sidebar-button" onclick="logout()" ondblclick="forceLogout()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                            <polyline points="16,17 21,12 16,7"/>
+                            <line x1="21" y1="12" x2="9" y2="12"/>
+                        </svg>
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="main-content" id="mainContent">
+            
+            <!-- Chat Container -->
+            <div class="chat-container" id="chatContainer">
+                <div class="chat-header">
+                    <div class="header-content">
+                        <h1>🤖 AI Financial Advisor</h1>
+                        <p>I'm your dedicated financial advisor, here to help you with all your financial questions</p>
+                    </div>
+                </div>
+            
+                <div class="chat-messages" id="chatMessages">
+                    <div class="welcome-message">
+                        <h3>👋 Welcome to AI Financial Advisor!</h3>
+                        <p>You can ask me about:</p>
+                        <p>• Budget planning and financial advice</p>
+                        <p>• Investment strategies and risk assessment</p>
+                        <p>• Debt management and repayment plans</p>
+                        <p>• Tax optimization and financial planning</p>
+                        <p>• Any other financial-related questions</p>
+                    </div>
+                </div>
+                
+                <div class="loading" id="loading">
+                    AI is thinking...
+                </div>
+                
+                <div class="chat-input">
+                    <div class="input-container">
+                        <textarea id="messageInput" placeholder="Ask me anything about personal finance..." maxlength="4000" rows="1"></textarea>
+                        <button class="send-button" id="sendButton" onclick="sendMessage()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="m22 2-7 20-4-9-9-4Z"/>
+                                <path d="M22 2 11 13"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    <!-- Login/Register Modal -->
+    <div class="modal-overlay" id="authModal">
+        <div class="modal-content">
+            <!-- Login Form -->
+            <div class="auth-form" id="loginForm">
+                <h2>Welcome Back</h2>
+                <p>Sign in to your account</p>
+                <div class="error-message" id="loginError" style="display: none;"></div>
+                <form onsubmit="handleLogin(event)">
+                    <div class="form-group">
+                        <label for="loginUsername">Username</label>
+                        <input type="text" id="loginUsername" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Password</label>
+                        <input type="password" id="loginPassword" required>
+                    </div>
+                    <button type="submit" class="auth-button">Sign In</button>
+                </form>
+                <p class="auth-switch">
+                    Don't have an account? 
+                    <a href="#" onclick="showRegisterForm()">Sign up</a>
+                </p>
+            </div>
+
+            <!-- Register Form -->
+            <div class="auth-form" id="registerForm" style="display: none;">
+                <h2>Create Account</h2>
+                <p>Join our financial advisor community</p>
+                <div class="error-message" id="registerError" style="display: none;"></div>
+                <form onsubmit="handleRegister(event)">
+                    <div class="form-group">
+                        <label for="registerUsername">Username</label>
+                        <input type="text" id="registerUsername" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPassword">Password</label>
+                        <input type="password" id="registerPassword" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="inviteCode">Invite Code</label>
+                        <input type="text" id="inviteCode" required>
+                    </div>
+                    <button type="submit" class="auth-button">Create Account</button>
+                </form>
+                <p class="auth-switch">
+                    Already have an account? 
+                    <a href="#" onclick="showLoginForm()">Sign in</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <script>
+        const chatMessages = document.getElementById('chatMessages');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const loading = document.getElementById('loading');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const authModal = document.getElementById('authModal');
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        const userInfo = document.getElementById('userInfo');
+        const username = document.getElementById('username');
+        const chatHistorySection = document.getElementById('chatHistorySection');
+        const chatHistoryList = document.getElementById('chatHistoryList');
+
+        // Global variables
+        let currentUser = null;
+        let currentSessionId = null;
+        let authToken = null;
+        let isHistoryExpanded = false;
+
+        // Authentication functions
+        function showLoginForm() {
+            loginForm.style.display = 'block';
+            registerForm.style.display = 'none';
+            // Clear any error messages
+            document.getElementById('loginError').style.display = 'none';
+            document.getElementById('registerError').style.display = 'none';
+        }
+
+        function showRegisterForm() {
+            loginForm.style.display = 'none';
+            registerForm.style.display = 'block';
+            // Clear any error messages
+            document.getElementById('loginError').style.display = 'none';
+            document.getElementById('registerError').style.display = 'none';
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            const errorElement = document.getElementById('loginError');
+
+            // Clear previous error
+            errorElement.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password }),
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    authToken = data.access_token;
+                    currentUser = { id: data.user_id, username: data.username };
+                    
+                    console.log('Login successful - User:', currentUser.username);
+                    console.log('Login successful - Token:', authToken ? 'exists' : 'null');
+                    
+                    // Store token in localStorage
+                    localStorage.setItem('authToken', authToken);
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    
+                    console.log('Login - Data saved to localStorage');
+                    
+                    // Hide modal and show user info
+                    authModal.style.display = 'none';
+                    showUserInfo();
+                    loadChatHistory();
+                } else {
+                    const error = await response.json();
+                    errorElement.textContent = 'Username or Password INCORRECT';
+                    errorElement.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                errorElement.textContent = 'Login failed. Please try again.';
+                errorElement.style.display = 'block';
+            }
+        }
+
+        async function handleRegister(event) {
+            event.preventDefault();
+            const username = document.getElementById('registerUsername').value;
+            const password = document.getElementById('registerPassword').value;
+            const inviteCode = document.getElementById('inviteCode').value;
+            const errorElement = document.getElementById('registerError');
+
+            // Clear previous error
+            errorElement.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password, invite_code: inviteCode }),
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    authToken = data.access_token;
+                    currentUser = { id: data.user_id, username: data.username };
+                    
+                    console.log('Registration successful - User:', currentUser.username);
+                    console.log('Registration successful - Token:', authToken ? 'exists' : 'null');
+                    
+                    // Store token in localStorage
+                    localStorage.setItem('authToken', authToken);
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    
+                    console.log('Registration - Data saved to localStorage');
+                    
+                    // Hide modal and show user info
+                    authModal.style.display = 'none';
+                    showUserInfo();
+                    loadChatHistory();
+                } else {
+                    const error = await response.json();
+                    errorElement.textContent = error.detail;
+                    errorElement.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                errorElement.textContent = 'Registration failed. Please try again.';
+                errorElement.style.display = 'block';
+            }
+        }
+
+        function logout() {
+            // Clear authentication data
+            authToken = null;
+            currentUser = null;
+            currentSessionId = null;
+            
+            // Clear only authentication-related localStorage
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUser');
+            
+            // Clear sessionStorage
+            sessionStorage.clear();
+            
+            // Force clear all global variables
+            messageHistory = [];
+            isHistoryExpanded = false;
+            
+            // Show logout message briefly
+            const logoutMessage = document.createElement('div');
+            logoutMessage.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: #3b82f6;
+                color: white;
+                padding: 20px 40px;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 500;
+                z-index: 10000;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            `;
+            logoutMessage.textContent = 'Logging out...';
+            document.body.appendChild(logoutMessage);
+            
+            // Multiple methods to ensure page reload
+            setTimeout(() => {
+                // Method 1: Force reload with cache bypass
+                window.location.href = window.location.href + '?logout=' + Date.now();
+            }, 500);
+            
+            // Method 2: Fallback reload
+            setTimeout(() => {
+                window.location.reload(true);
+            }, 1000);
+            
+            // Method 3: Hard reload as final fallback
+            setTimeout(() => {
+                window.location.replace(window.location.origin + window.location.pathname);
+            }, 1500);
+        }
+
+        function showUserInfo() {
+            if (currentUser) {
+                username.textContent = currentUser.username;
+                userInfo.style.display = 'block';
+            }
+        }
+
+        // Check authentication on page load
+        function checkAuth() {
+            console.log('=== checkAuth START ===');
+            console.log('checkAuth - Current URL:', window.location.href);
+            console.log('checkAuth - URL params:', window.location.search);
+            
+            const savedToken = localStorage.getItem('authToken');
+            const savedUser = localStorage.getItem('currentUser');
+            
+            console.log('checkAuth - savedToken:', savedToken ? 'exists' : 'null');
+            console.log('checkAuth - savedUser:', savedUser ? 'exists' : 'null');
+            
+            if (savedToken) {
+                console.log('checkAuth - Token length:', savedToken.length);
+                console.log('checkAuth - Token preview:', savedToken.substring(0, 20) + '...');
+            }
+            
+            if (savedUser) {
+                console.log('checkAuth - User data:', savedUser);
+            }
+            
+            if (savedToken && savedUser) {
+                try {
+                    authToken = savedToken;
+                    currentUser = JSON.parse(savedUser);
+                    console.log('checkAuth - User authenticated:', currentUser.username);
+                    console.log('checkAuth - User ID:', currentUser.id);
+                    
+                    authModal.style.display = 'none';
+                    showUserInfo();
+                    loadChatHistory();
+                    console.log('checkAuth - Authentication successful');
+                } catch (error) {
+                    console.error('checkAuth - Error parsing user data:', error);
+                    console.error('checkAuth - Raw user data:', savedUser);
+                    // Clear corrupted data
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('currentUser');
+                    authModal.style.display = 'flex';
+                }
+            } else {
+                console.log('checkAuth - No saved authentication data');
+                console.log('checkAuth - Showing login modal');
+                authModal.style.display = 'flex';
+            }
+            console.log('=== checkAuth END ===');
+        }
+
+        // Sidebar functionality
+        function toggleSidebar() {
+            sidebar.classList.toggle('collapsed');
+        }
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', function(event) {
+            if (window.innerWidth <= 768) {
+                if (!sidebar.contains(event.target) && !sidebarToggle.contains(event.target)) {
+                    sidebar.classList.add('collapsed');
+                }
+            }
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 768) {
+                // On desktop, remove collapsed class to show sidebar
+                sidebar.classList.remove('collapsed');
+            }
+        });
+
+        // Chat history functions
+        async function loadChatHistory() {
+            if (!authToken) return;
+            
+            try {
+                const response = await fetch('/api/chat/sessions', {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                    },
+                });
+
+                if (response.ok) {
+                    const sessions = await response.json();
+                    displayRecentChats(sessions);
+                    displayFullChatHistory(sessions);
+                } else if (response.status === 401) {
+                    console.error('Chat history request failed - unauthorized');
+                    // Don't logout here, just log the error
+                } else {
+                    console.error('Error loading chat history:', response.status, response.statusText);
+                }
+            } catch (error) {
+                console.error('Error loading chat history:', error);
+            }
+        }
+
+        function displayChatHistory(sessions) {
+            chatHistoryList.innerHTML = '';
+            
+            if (sessions.length === 0) {
+                chatHistoryList.innerHTML = '<p style="color: #9ca3af; font-size: 12px; text-align: center; padding: 20px;">No chat history yet</p>';
+                return;
+            }
+
+            sessions.forEach(session => {
+                const item = document.createElement('div');
+                item.className = 'chat-history-item';
+                item.onclick = () => loadChatSession(session.id);
+                
+                const date = new Date(session.updated_at).toLocaleDateString();
+                item.innerHTML = `
+                    <div class="title">${session.title}</div>
+                    <div class="date">${date}</div>
+                `;
+                
+                chatHistoryList.appendChild(item);
+            });
+            
+            chatHistorySection.style.display = 'block';
+        }
+
+        function displayRecentChats(sessions) {
+            const recentChatsList = document.getElementById('recentChatsList');
+            
+            // Show only the 3 most recent chats
+            const recentSessions = sessions.slice(0, 3);
+            
+            if (recentSessions.length === 0) {
+                recentChatsList.innerHTML = '<p style="color: #64748b; font-size: 12px; text-align: center; padding: 20px;">No recent chats</p>';
+            } else {
+                recentChatsList.innerHTML = recentSessions.map(session => `
+                    <div class="chat-item ${session.id === currentSessionId ? 'active' : ''}" onclick="loadChatSession('${session.id}')">
+                        <div class="chat-title">${session.title}</div>
+                        <div class="chat-time">${new Date(session.created_at).toLocaleDateString()}</div>
+                    </div>
+                `).join('');
+            }
+            
+            // 检查是否需要滚动条
+            checkScrollable(recentChatsList);
+        }
+
+        function displayFullChatHistory(sessions) {
+            const fullChatHistoryList = document.getElementById('fullChatHistoryList');
+            
+            if (sessions.length === 0) {
+                fullChatHistoryList.innerHTML = '<p style="color: #64748b; font-size: 12px; text-align: center; padding: 20px;">No chat history yet</p>';
+            } else {
+                fullChatHistoryList.innerHTML = sessions.map(session => `
+                    <div class="chat-item ${session.id === currentSessionId ? 'active' : ''}" onclick="loadChatSession('${session.id}')">
+                        <div class="chat-title">${session.title}</div>
+                        <div class="chat-time">${new Date(session.created_at).toLocaleDateString()}</div>
+                    </div>
+                `).join('');
+            }
+            
+            // 检查是否需要滚动条
+            checkScrollable(fullChatHistoryList);
+        }
+
+        function toggleChatHistory() {
+            const recentSection = document.getElementById('recentChatsSection');
+            const fullSection = document.getElementById('fullChatHistorySection');
+            
+            if (isHistoryExpanded) {
+                recentSection.style.display = 'block';
+                fullSection.style.display = 'none';
+                isHistoryExpanded = false;
+            } else {
+                recentSection.style.display = 'none';
+                fullSection.style.display = 'block';
+                isHistoryExpanded = true;
+            }
+        }
+
+        function checkScrollable(element) {
+            // 使用 setTimeout 确保DOM更新完成后再检查
+            setTimeout(() => {
+                if (element.scrollHeight > element.clientHeight) {
+                    element.classList.add('has-scroll');
+                } else {
+                    element.classList.remove('has-scroll');
+                }
+            }, 10);
+        }
+
+        async function loadChatSession(sessionId) {
+            if (!authToken) return;
+            
+            console.log(`Loading chat session: ${sessionId}`);
+            
+            try {
+                const response = await fetch(`/api/chat/sessions/${sessionId}/messages`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                    },
+                });
+
+                if (response.ok) {
+                    const messages = await response.json();
+                    currentSessionId = sessionId;
+                    
+                    // Load messages
+                    const chatMessages = document.getElementById('chatMessages');
+                    chatMessages.innerHTML = '';
+                    messages.forEach(msg => {
+                        addMessage(msg.content, msg.role === 'user' ? 'user' : 'assistant');
+                    });
+                    
+                    // Refresh chat history display to show active session
+                    loadChatHistory();
+                }
+            } catch (error) {
+                console.error('Error loading chat session:', error);
+            }
+        }
+
+        function goToCurrentChat() {
+            // This is the main chat interface - already visible
+            // Just ensure we're in the current session
+            currentSessionId = null;
+            
+            // Refresh chat history display
+            loadChatHistory();
+        }
+
+        // Sidebar button functions
+        function newChat() {
+            // Clear chat messages and start new session
+            currentSessionId = null;
+            chatMessages.innerHTML = `
+                <div class="welcome-message">
+                    <h3>👋 Welcome to AI Financial Advisor!</h3>
+                    <p>You can ask me about:</p>
+                    <p>• Budget planning and financial advice</p>
+                    <p>• Investment strategies and risk assessment</p>
+                    <p>• Debt management and repayment plans</p>
+                    <p>• Tax optimization and financial planning</p>
+                    <p>• Any other financial-related questions</p>
+                </div>
+            `;
+            
+            // Refresh chat history display
+            loadChatHistory();
+        }
+
+        function clearChat() {
+            if (confirm('Are you sure you want to clear the chat?')) {
+                newChat();
+            }
+        }
+
+        function askQuestion(question) {
+            messageInput.value = question;
+            sendMessage();
+        }
+
+
+        // Alternative simple logout method
+        function forceLogout() {
+            // Clear only authentication data immediately
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUser');
+            sessionStorage.clear();
+            
+            // Force redirect to clean URL
+            window.location.href = window.location.origin + window.location.pathname;
+        }
+
+        function showContextStatus() {
+            // 显示当前上下文的详细信息
+            const contextInfo = {
+                sessionId: currentSessionId,
+                messageCount: messageHistory ? messageHistory.length : 0,
+                contextStrategy: 'smart',
+                hasSummary: true,
+                maxContextLength: 10
+            };
+            
+            console.log('Context Status:', contextInfo);
+            
+            // 可以在UI中显示上下文状态
+            const statusElement = document.getElementById('contextStatus');
+            if (statusElement) {
+                statusElement.innerHTML = `
+                    <div class="context-info" style="font-size: 11px; color: #64748b; padding: 8px; background: #f8fafc; border-radius: 4px; margin: 8px 0;">
+                        <div>📝 Context: ${contextInfo.messageCount} messages</div>
+                        <div>🧠 Strategy: ${contextInfo.contextStrategy}</div>
+                        <div>📋 Summary: ${contextInfo.hasSummary ? 'Yes' : 'No'}</div>
+                        <div>🔢 Max Length: ${contextInfo.maxContextLength}</div>
+                    </div>
+                `;
+            }
+        }
+
+        function toggleTheme() {
+            // Future theme toggle functionality
+            alert('Theme toggle feature coming soon!');
+        }
+
+
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            // Check if user is authenticated
+            if (!authToken) {
+                alert('Please log in to send messages.');
+                return;
+            }
+
+            // 清空输入框并重置高度
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+            
+            // 禁用发送按钮
+            sendButton.disabled = true;
+            
+            // 添加用户消息
+            addMessage(message, 'user');
+            
+            // 显示加载状态
+            loading.style.display = 'block';
+            
+            try {
+                // 发送到后端
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`,
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        session_id: currentSessionId,
+                        context_length: 10,  // 最大10条消息的上下文
+                        include_summary: true  // 包含对话摘要
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // 添加AI回复
+                    addMessage(data.response, 'assistant');
+                    
+                    // Update current session ID
+                    currentSessionId = data.session_id;
+                    
+                    // Reload chat history to show new session
+                    loadChatHistory();
+                } else if (response.status === 401) {
+                    // Token expired, redirect to login
+                    logout();
+                    alert('Session expired. Please log in again.');
+                } else {
+                    const error = await response.json();
+                    addMessage('Sorry, I encountered an error: ' + error.detail, 'assistant');
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                addMessage('Sorry, I encountered a network error. Please try again.', 'assistant');
+            } finally {
+                // 隐藏加载状态
+                loading.style.display = 'none';
+                // 重新启用发送按钮
+                sendButton.disabled = false;
+                messageInput.focus();
+            }
+
+        }
+
+        function addMessage(content, sender) {
+            // 移除欢迎消息
+            const welcomeMessage = chatMessages.querySelector('.welcome-message');
+            if (welcomeMessage) {
+                welcomeMessage.remove();
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = sender === 'user' ? 'You' : 'AI';
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+            
+            // 如果是AI消息，渲染Markdown；否则直接显示文本
+            if (sender === 'assistant') {
+                messageContent.innerHTML = marked.parse(content);
+            } else {
+                messageContent.textContent = content;
+            }
+            
+            if (sender === 'user') {
+                messageDiv.appendChild(messageContent);
+                messageDiv.appendChild(avatar);
+            } else {
+                messageDiv.appendChild(avatar);
+                messageDiv.appendChild(messageContent);
+            }
+            
+            chatMessages.appendChild(messageDiv);
+            
+            // 滚动到底部
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function doNothing() {
+            // Button click does nothing
+            return;
+        }
+
+        // Initialize app on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('=== DOMContentLoaded START ===');
+            console.log('DOMContentLoaded - Current URL:', window.location.href);
+            
+            // Check for logout parameter and clear any cached data
+            const urlParams = new URLSearchParams(window.location.search);
+            console.log('DOMContentLoaded - URL params:', window.location.search);
+            console.log('DOMContentLoaded - Has logout param:', urlParams.has('logout'));
+            
+            if (urlParams.has('logout')) {
+                console.log('DOMContentLoaded - Clearing auth data due to logout param');
+                // Clear only authentication-related storage when coming from logout
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('currentUser');
+                sessionStorage.clear();
+                // Remove logout parameter from URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+                console.log('DOMContentLoaded - Logout param removed from URL');
+            }
+            
+            console.log('DOMContentLoaded - Calling checkAuth()');
+            checkAuth();
+            newChat();
+            console.log('=== DOMContentLoaded END ===');
+            
+            
+            // 回车发送消息，Shift+Enter换行
+            messageInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            // 自动调整textarea高度
+            messageInput.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+            });
+            
+            // Sidebar toggle event listener
+            if (sidebarToggle) {
+                sidebarToggle.addEventListener('click', toggleSidebar);
+            }
+        });
+
+        // 监听窗口大小变化，重新检查滚动条
+        window.addEventListener('resize', () => {
+            const recentChatsList = document.getElementById('recentChatsList');
+            const fullChatHistoryList = document.getElementById('fullChatHistoryList');
+            
+            if (recentChatsList) {
+                checkScrollable(recentChatsList);
+            }
+            if (fullChatHistoryList) {
+                checkScrollable(fullChatHistoryList);
+            }
+        });
+    </script>
+</body>
+</html>
+
