@@ -93,6 +93,8 @@ def call_ai_api(
 ) -> Dict:
     """
     调用DeepSeek API
+    该函数的唯一职责是调用DeepSeek API，与 DeepSeek AI 的服务器进行一次完整的网络通信
+    并返回API响应结果。
     
     Args:
         messages: 消息列表，格式：[{"role": "user/assistant/system", "content": "..."}]
