@@ -1,14 +1,21 @@
+version: '3.8'
+
 services:
-  backend:
-    build: ./backend
+  financial-advisor:
+    build: .
+    container_name: financial_advisor
     ports:
       - "8000:8000"
     volumes:
-      - ./web:/app/web
-    depends_on:
-      - brain
+      - ./data:/app/data
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    networks:
+      - financial_network
 
-  brain:
-    build: ./brain
-    ports:
-      - "8001:8001"
+networks:
+  financial_network:
+    driver: bridge

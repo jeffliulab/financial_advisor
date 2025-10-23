@@ -1,7 +1,384 @@
+<!--
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    AI FINANCIAL ADVISOR - API 接口文档                         ║
+║                      Frontend Web Application v1.0                           ║
+╚══════════════════════════════════════════════════════════════════════════════╝
 
+本文件是 AI 财务顾问系统的前端界面，以下是所有后端 API 接口的完整说明。
+
+================================================================================
+                              【认证相关接口】
+================================================================================
+
+1. POST /api/auth/login
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   【功能】用户登录认证
+   【请求头】
+      Content-Type: application/json
+   【请求体】
+      {
+        "username": "用户名 (string, required)",
+        "password": "密码 (string, required)"
+      }
+   【响应成功 200】
+      {
+        "access_token": "JWT认证令牌 (string)",
+        "token_type": "Bearer",
+        "user_id": "用户ID (integer)",
+        "username": "用户名 (string)"
+      }
+   【响应失败 401】
+      {
+        "detail": "Username or Password INCORRECT"
+      }
+   【调用位置】handleLogin() 函数 - 第995-1041行
+   【说明】成功后将token存储到localStorage，用于后续所有需要认证的请求
+
+
+2. POST /api/auth/register
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   【功能】用户注册
+   【请求头】
+      Content-Type: application/json
+   【请求体】
+      {
+        "username": "用户名 (string, required)",
+        "password": "密码 (string, required)",
+        "invite_code": "邀请码 (string, required)"
+      }
+   【响应成功 200】
+      {
+        "access_token": "JWT认证令牌 (string)",
+        "token_type": "Bearer",
+        "user_id": "用户ID (integer)",
+        "username": "用户名 (string)"
+      }
+   【响应失败 400】
+      {
+        "detail": "错误信息（如：邀请码无效、用户名已存在等）"
+      }
+   【调用位置】handleRegister() 函数 - 第1043-1090行
+   【说明】需要有效的邀请码才能注册，成功后自动登录
+
+
+================================================================================
+                              【聊天相关接口】
+================================================================================
+
+3. POST /api/chat
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   【功能】发送聊天消息，获取AI回复
+   【请求头】
+      Content-Type: application/json
+      Authorization: Bearer {access_token}
+   【请求体】
+      {
+        "message": "用户消息内容 (string, required)",
+        "session_id": "会话ID (string, optional) - null表示创建新会话",
+        "context_length": "上下文长度 (integer, default: 10) - 最多保留多少条历史消息",
+        "include_summary": "是否包含摘要 (boolean, default: true) - 对话摘要优化上下文"
+      }
+   【响应成功 200】
+      {
+        "response": "AI回复内容 (string, 支持Markdown格式)",
+        "session_id": "会话ID (string) - 用于后续消息关联",
+        "message_id": "消息ID (integer)",
+        "timestamp": "时间戳 (string, ISO 8601格式)"
+      }
+   【响应失败 401】
+      {
+        "detail": "Unauthorized - Token过期或无效"
+      }
+   【响应失败 500】
+      {
+        "detail": "Internal Server Error - 服务器错误"
+      }
+   【调用位置】sendMessage() 函数 - 第1453-1523行
+   【说明】
+      - 首次发送消息时session_id为null，系统自动创建新会话
+      - 后续消息使用返回的session_id保持会话连续性
+      - AI回复支持Markdown格式，前端使用marked.js库渲染
+      - context_length控制发送给AI的历史消息数量，优化性能和成本
+
+
+4. GET /api/chat/sessions
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   【功能】获取当前用户的所有聊天会话列表
+   【请求头】
+      Authorization: Bearer {access_token}
+   【请求参数】无
+   【响应成功 200】
+      [
+        {
+          "id": "会话ID (string, UUID)",
+          "title": "会话标题 (string) - 通常是第一条消息的摘要",
+          "created_at": "创建时间 (string, ISO 8601)",
+          "updated_at": "更新时间 (string, ISO 8601)",
+          "message_count": "消息数量 (integer)"
+        },
+        ...
+      ]
+   【响应失败 401】
+      {
+        "detail": "Unauthorized - 需要登录"
+      }
+   【调用位置】loadChatHistory() 函数 - 第1223-1246行
+   【说明】
+      - 返回的会话按更新时间倒序排列（最新的在前）
+      - 前端显示最近3条在侧边栏，点击"History"显示全部
+      - 用于会话切换和历史记录管理
+
+
+5. GET /api/chat/sessions/{session_id}/messages
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   【功能】获取指定会话的所有历史消息
+   【请求头】
+      Authorization: Bearer {access_token}
+   【路径参数】
+      session_id: 会话ID (string, UUID)
+   【响应成功 200】
+      [
+        {
+          "id": "消息ID (integer)",
+          "role": "消息角色 (string) - 'user' 或 'assistant'",
+          "content": "消息内容 (string)",
+          "created_at": "创建时间 (string, ISO 8601)",
+          "session_id": "所属会话ID (string)"
+        },
+        ...
+      ]
+   【响应失败 401】
+      {
+        "detail": "Unauthorized - 需要登录"
+      }
+   【响应失败 404】
+      {
+        "detail": "Session not found - 会话不存在或无权访问"
+      }
+   【调用位置】loadChatSession() 函数 - 第1338-1367行
+   【说明】
+      - 消息按时间顺序返回（旧消息在前，新消息在后）
+      - 点击侧边栏的历史会话时调用，加载并显示完整对话
+      - role为'user'的消息显示在右侧，'assistant'的消息显示在左侧
+
+
+================================================================================
+                          【Dashboard工具面板接口】
+================================================================================
+
+6. POST /api/dashboard/activate
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   【功能】激活Dashboard工具面板，切换到三栏布局
+   【请求头】
+      Content-Type: application/json
+      Authorization: Bearer {access_token}
+   【请求体】
+      {
+        "tool": "工具名称 (string, required)"
+      }
+   【可用工具】
+      - "budget-planner": 预算规划工具
+      - "spending-analyzer": 支出分析工具
+      - "investment-dashboard": 投资仪表板（Coming Soon）
+   【响应成功 200】
+      {
+        "dashboard_active": true,
+        "tool_name": "工具名称 (string)",
+        "tool_title": "工具显示标题 (string)",
+        "tool_url": "工具页面URL (string) - 相对路径"
+      }
+   【响应失败 400】
+      {
+        "detail": "Unknown tool: {tool_name}"
+      }
+   【响应失败 401】
+      {
+        "detail": "Unauthorized - 需要登录"
+      }
+   【调用位置】openDashboard() 函数 - 第1949-1980行
+   【说明】
+      - 此接口用于激活三栏布局，在中间面板显示工具页面
+      - 前端接收响应后，会自动：
+        * 设置 dashboardActive = true
+        * 在iframe中加载工具页面
+        * 切换页面布局为三栏模式（侧边栏 + Dashboard + ChatBot）
+        * ChatBot宽度自动调整为400px
+      - 工具页面位于 /tools/ 目录下，作为独立HTML页面
+      - 可以通过closeDashboard()函数关闭Dashboard，恢复二栏布局
+   【使用示例】
+      JavaScript调用:
+      ```javascript
+      await openDashboard('budget-planner');  // 打开预算规划工具
+      await openDashboard('spending-analyzer'); // 打开支出分析工具
+      ```
+      
+      完整请求示例:
+      ```javascript
+      const response = await fetch('/api/dashboard/activate', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer YOUR_TOKEN_HERE'
+          },
+          body: JSON.stringify({ tool: 'budget-planner' })
+      });
+      const data = await response.json();
+      // data.dashboard_active === true
+      // data.tool_url === '/tools/budget-planner.html'
+      ```
+
+
+================================================================================
+                          【预算规划相关接口（预留）】
+================================================================================
+
+7. GET /api/budget
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   【功能】获取用户的预算数据（功能预留，前端已实现UI）
+   【请求头】
+      Authorization: Bearer {access_token}
+   【响应成功 200】
+      [
+        {
+          "budget_type": "预算类型 (string) - 'monthly' 或 'annual'",
+          "total_income": "总收入 (float)",
+          "total_expenses": "总支出 (float)",
+          "savings_goal": "储蓄目标 (float)",
+          "items": [
+            {
+              "category": "类别 (string)",
+              "item_type": "项目类型 (string) - 'income' 或 'expense'",
+              "planned_amount": "计划金额 (float)",
+              "actual_amount": "实际金额 (float, optional)"
+            }
+          ]
+        }
+      ]
+   【调用位置】web/README.md 第193-205行（功能预留）
+   【说明】
+      - 此功能在前端UI中已预留Budget Planner按钮
+      - 后端接口需要实现才能使用
+      - 支持月度和年度预算管理
+
+
+================================================================================
+                              【文件上传接口（预留）】
+================================================================================
+
+8. POST /api/files/upload
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   【功能】上传财务文档（功能预留）
+   【请求头】
+      Authorization: Bearer {access_token}
+      Content-Type: multipart/form-data
+   【请求体】
+      FormData {
+        "file": "文件对象 (File)",
+        "file_type": "文件类型 (string) - 如 'bank_statement', 'invoice' 等"
+      }
+   【响应成功 200】
+      {
+        "file_id": "文件ID (string)",
+        "filename": "文件名 (string)",
+        "upload_time": "上传时间 (string)",
+        "status": "处理状态 (string)"
+      }
+   【说明】此功能在架构中已设计，需要后端实现
+
+
+================================================================================
+                              【认证流程说明】
+================================================================================
+
+【Token管理】
+  ├─ 存储位置：localStorage.setItem('authToken', token)
+  ├─ 使用方式：所有需要认证的请求都在Header中携带
+  │             Authorization: Bearer {token}
+  ├─ 过期处理：401响应时自动调用logout()函数
+  └─ 安全建议：Token应设置合理的过期时间（如24小时）
+
+【会话管理】
+  ├─ 当前会话：currentSessionId 变量存储
+  ├─ 新建会话：设置 session_id = null 发送消息
+  ├─ 切换会话：点击历史记录加载对应session_id的消息
+  └─ 会话持久化：所有会话数据存储在后端数据库
+
+【状态持久化】
+  ├─ localStorage: authToken, currentUser
+  ├─ sessionStorage: 临时会话数据
+  └─ 内存变量: currentSessionId, messageHistory
+
+
+================================================================================
+                              【数据流向图】
+================================================================================
+
+用户操作流程：
+  1. 用户访问 → 检查localStorage中的authToken → 有效则自动登录
+  2. 登录/注册 → 获取token → 存储到localStorage → 显示聊天界面
+  3. 发送消息 → POST /api/chat (带token) → 获取AI回复 → 更新界面
+  4. 查看历史 → GET /api/chat/sessions → 显示会话列表
+  5. 加载会话 → GET /api/chat/sessions/{id}/messages → 显示历史消息
+  6. 退出登录 → 清除localStorage → 刷新页面 → 显示登录界面
+
+消息上下文优化：
+  ├─ context_length: 10 (默认保留10条历史消息)
+  ├─ include_summary: true (启用对话摘要)
+  └─ 作用：减少API调用成本，提高响应速度，保持对话连贯性
+
+
+================================================================================
+                              【开发者注意事项】
+================================================================================
+
+【后端实现要求】
+  1. 所有接口必须支持CORS，允许前端跨域访问
+  2. JWT Token应设置合理的过期时间和刷新机制
+  3. 用户密码必须加密存储（推荐bcrypt或argon2）
+  4. 会话数据需要与用户关联，保证数据隔离
+  5. AI回复支持Markdown格式，建议使用marked.js解析
+
+【安全建议】
+  1. 实现请求频率限制（Rate Limiting）
+  2. 验证所有输入数据，防止XSS和SQL注入
+  3. 敏感操作需要二次验证
+  4. Token应使用HTTPS传输
+  5. 定期轮换密钥和更新安全策略
+
+【性能优化】
+  1. 聊天历史分页加载（当前一次加载全部）
+  2. 实现WebSocket支持实时消息推送
+  3. 添加消息缓存机制
+  4. 对长消息进行分页显示
+  5. 实现虚拟滚动优化大量消息显示
+
+【API基础URL配置】
+  当前配置：相对路径 '/api/'
+  生产环境建议：配置环境变量 VITE_API_BASE_URL 或类似机制
+  示例：const API_BASE = process.env.API_BASE_URL || 'http://localhost:8000/api'
+
+================================================================================
+                              【版本信息】
+================================================================================
+
+前端版本：v1.0
+创建日期：2024
+最后更新：2025-10-23
+依赖库：
+  - marked.js v9.1.6 (Markdown渲染)
+  - 无其他外部依赖（使用原生JavaScript）
+
+技术栈：
+  - HTML5 + CSS3 + 原生JavaScript (ES6+)
+  - Fetch API (网络请求)
+  - LocalStorage (状态持久化)
+  - 响应式设计 (支持移动端)
+
+================================================================================
+-->
 
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -268,16 +645,67 @@
             transition: all 0.3s ease;
         }
 
+        /* Dashboard Panel */
+        .dashboard-panel {
+            display: none;
+            flex-direction: column;
+            background: #ffffff;
+            border-right: 1px solid #e2e8f0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .dashboard-panel.active {
+            display: flex;
+            flex: 1;
+            min-width: 400px;
+        }
+
+        .dashboard-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid #e5e7eb;
+            background: #f9fafb;
+        }
+
+        .dashboard-header h2 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .dashboard-content {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .dashboard-content iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
 
 
         /* Chat Container */
         .chat-container {
-            flex: 1;
             height: 100vh;
             background: #ffffff;
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        /* Two-column layout (no dashboard) */
+        .main-content:not(.three-column) .chat-container {
+            flex: 1;
+        }
+
+        /* Three-column layout (with dashboard) */
+        .main-content.three-column .chat-container {
+            width: 400px;
+            flex-shrink: 0;
         }
 
         .chat-header {
@@ -779,11 +1207,12 @@
             <div class="sidebar-content">
                 <div class="sidebar-section">
                     <h3>Chat</h3>
-                    <button class="sidebar-button" onclick="goToCurrentChat()">
+                    <button class="sidebar-button" onclick="goToHomepage()">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                            <polyline points="9 22 9 12 15 12 15 22"/>
                         </svg>
-                        Current Chat
+                        Homepage
                     </button>
                     <button class="sidebar-button" onclick="newChat()">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -821,11 +1250,14 @@
                 </div>
                 <div class="sidebar-section">
                     <h3>Personal Tools</h3>
-                    <button class="sidebar-button" onclick="doNothing()">
+                    <button class="sidebar-button" onclick="openDashboard('budget-planner')">
                         💰 Budget Planner
                     </button>
-                    <button class="sidebar-button" onclick="doNothing()">
-                        💳 Expense Analyzer
+                    <button class="sidebar-button" onclick="openDashboard('spending-analyzer')">
+                        💳 Spending Analyzer
+                    </button>
+                    <button class="sidebar-button" onclick="openDashboard('investment-dashboard')">
+                        📈 Investment Dashboard
                     </button>
                 </div>
                 <div class="sidebar-section">
@@ -860,6 +1292,16 @@
 
         <!-- Main Content Area -->
         <div class="main-content" id="mainContent">
+            
+            <!-- Dashboard Panel (initially hidden) -->
+            <div class="dashboard-panel" id="dashboardPanel">
+                <div class="dashboard-header">
+                    <h2 id="dashboardTitle">Dashboard</h2>
+                </div>
+                <div class="dashboard-content">
+                    <iframe id="dashboardFrame" src="about:blank"></iframe>
+                </div>
+            </div>
             
             <!-- Chat Container -->
             <div class="chat-container" id="chatContainer">
@@ -914,8 +1356,8 @@
                         <input type="text" id="loginUsername" required>
                     </div>
                     <div class="form-group">
-                        <label for="loginPassword">Password</label>
-                        <input type="password" id="loginPassword" required>
+                        <label for="loginPassword">Password (min. 6 characters)</label>
+                        <input type="password" id="loginPassword" required minlength="6">
                     </div>
                     <button type="submit" class="auth-button">Sign In</button>
                 </form>
@@ -936,8 +1378,8 @@
                         <input type="text" id="registerUsername" required>
                     </div>
                     <div class="form-group">
-                        <label for="registerPassword">Password</label>
-                        <input type="password" id="registerPassword" required>
+                        <label for="registerPassword">Password (min. 6 characters)</label>
+                        <input type="password" id="registerPassword" required minlength="6">
                     </div>
                     <div class="form-group">
                         <label for="inviteCode">Invite Code</label>
@@ -974,6 +1416,8 @@
         let currentSessionId = null;
         let authToken = null;
         let isHistoryExpanded = false;
+        let dashboardActive = false;
+        let currentDashboardTool = null;
 
         // Authentication functions
         function showLoginForm() {
@@ -1277,7 +1721,7 @@
             const recentSessions = sessions.slice(0, 3);
             
             if (recentSessions.length === 0) {
-                recentChatsList.innerHTML = '<p style="color: #64748b; font-size: 12px; text-align: center; padding: 20px;">No recent chats</p>';
+                recentChatsList.innerHTML = '<p style="color: #64748b; font-size: 12px; text-align: center; padding: 20px;">No recent chats yet</p>';
             } else {
                 recentChatsList.innerHTML = recentSessions.map(session => `
                     <div class="chat-item ${session.id === currentSessionId ? 'active' : ''}" onclick="loadChatSession('${session.id}')">
@@ -1366,13 +1810,19 @@
             }
         }
 
-        function goToCurrentChat() {
-            // This is the main chat interface - already visible
-            // Just ensure we're in the current session
+        function goToHomepage() {
+            // Return to two-column layout (close dashboard if open)
+            if (dashboardActive) {
+                closeDashboard();
+            }
+            
+            // Reset to main chat interface
             currentSessionId = null;
             
             // Refresh chat history display
             loadChatHistory();
+            
+            console.log('Returned to homepage - two-column layout');
         }
 
         // Sidebar button functions
@@ -1396,7 +1846,7 @@
         }
 
         function clearChat() {
-            if (confirm('Are you sure you want to clear the chat?')) {
+            if (confirm('Are you sure you want to clear this chat?')) {
                 newChat();
             }
         }
@@ -1446,7 +1896,7 @@
 
         function toggleTheme() {
             // Future theme toggle functionality
-            alert('Theme toggle feature coming soon!');
+            alert('Theme switcher coming soon!');
         }
 
 
@@ -1456,7 +1906,7 @@
 
             // Check if user is authenticated
             if (!authToken) {
-                alert('Please log in to send messages.');
+                alert('Please login to send messages.');
                 return;
             }
 
@@ -1503,10 +1953,10 @@
                 } else if (response.status === 401) {
                     // Token expired, redirect to login
                     logout();
-                    alert('Session expired. Please log in again.');
+                    alert('Session expired. Please login again.');
                 } else {
                     const error = await response.json();
-                    addMessage('Sorry, I encountered an error: ' + error.detail, 'assistant');
+                    addMessage('Sorry, I encountered an error: ' + (error.detail || 'Unknown error'), 'assistant');
                 }
                 
             } catch (error) {
@@ -1563,6 +2013,85 @@
         function doNothing() {
             // Button click does nothing
             return;
+        }
+
+        // ============================================================================
+        //                           Dashboard Management
+        // ============================================================================
+        
+        async function openDashboard(toolName) {
+            if (!authToken) {
+                alert('Please login to access tools.');
+                return;
+            }
+            
+            try {
+                // Call backend API to get dashboard configuration
+                const response = await fetch('/api/dashboard/activate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        tool: toolName
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    if (data.dashboard_active) {
+                        activateDashboard(data.tool_name, data.tool_title, data.tool_url);
+                    }
+                } else {
+                    console.error('Failed to activate dashboard:', response.status);
+                }
+            } catch (error) {
+                console.error('Error activating dashboard:', error);
+            }
+        }
+        
+        function activateDashboard(toolName, toolTitle, toolUrl) {
+            dashboardActive = true;
+            currentDashboardTool = toolName;
+            
+            // Update dashboard content
+            const dashboardTitle = document.getElementById('dashboardTitle');
+            const dashboardFrame = document.getElementById('dashboardFrame');
+            const dashboardPanel = document.getElementById('dashboardPanel');
+            const mainContent = document.getElementById('mainContent');
+            
+            dashboardTitle.textContent = toolTitle;
+            dashboardFrame.src = toolUrl;
+            
+            // Activate three-column layout
+            dashboardPanel.classList.add('active');
+            mainContent.classList.add('three-column');
+            
+            console.log(`Dashboard activated: ${toolName}`);
+        }
+        
+        function closeDashboard() {
+            dashboardActive = false;
+            currentDashboardTool = null;
+            
+            // Deactivate dashboard
+            const dashboardPanel = document.getElementById('dashboardPanel');
+            const mainContent = document.getElementById('mainContent');
+            const dashboardFrame = document.getElementById('dashboardFrame');
+            
+            dashboardPanel.classList.remove('active');
+            mainContent.classList.remove('three-column');
+            dashboardFrame.src = 'about:blank';
+            
+            console.log('Dashboard closed');
+        }
+        
+        function toggleDashboard() {
+            if (dashboardActive) {
+                closeDashboard();
+            }
         }
 
         // Initialize app on page load

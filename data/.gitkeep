@@ -1,0 +1,8 @@
+# 此文件用于保持data目录在Git中的存在
+# 目录结构说明：
+# 
+# data/
+# ├── users/               # 用户数据目录（自动创建）
+# ├── invite_codes.json    # 邀请码配置（自动生成）
+# └── last_user_id.txt     # 用户ID计数（自动生成）
+
