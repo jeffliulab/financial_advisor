@@ -282,40 +282,6 @@
       - 前端执行完指令后，指令会自动从队列中移除
       - 如果没有待执行指令，返回空数组
 
-
-================================================================================
-                  【Dashboard工具面板接口 - 已废弃 ⚠️】
-================================================================================
-
-⚠️ 以下接口已废弃，请使用新的 UI 动态控制接口 (POST /api/ui/command)
-
-8. POST /api/dashboard/activate [已废弃]
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   【状态】已废弃 - 请使用 POST /api/ui/command
-   【功能】激活Dashboard工具面板（旧版直接调用方式）
-   【迁移说明】
-      旧代码：
-      ```javascript
-      await fetch('/api/dashboard/activate', {
-          method: 'POST',
-          headers: {'Authorization': 'Bearer TOKEN'},
-          body: JSON.stringify({tool: 'budget-planner'})
-      });
-      ```
-      
-      新代码（推荐）：
-      ```javascript
-      await fetch('/api/ui/command', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({
-              command: 'open_dashboard',
-              params: {tool: 'budget-planner'}
-          })
-      });
-      ```
-
-
 ================================================================================
                           【预算规划相关接口（预留）】
 ================================================================================
