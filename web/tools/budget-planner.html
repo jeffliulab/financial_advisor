@@ -14,115 +14,1095 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #f9fafb;
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            min-height: 100vh;
             padding: 20px;
         }
 
         .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
             text-align: center;
-            max-width: 700px;
-            background: white;
-            padding: 48px;
-            border-radius: 16px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
         }
 
-        .icon {
-            font-size: 80px;
-            margin-bottom: 24px;
-        }
-
-        h1 {
+        .header h1 {
             font-size: 36px;
             color: #111827;
-            margin-bottom: 16px;
-            font-weight: 600;
-        }
-
-        .subtitle {
-            font-size: 18px;
-            color: #6b7280;
-            margin-bottom: 32px;
-        }
-
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-top: 32px;
-        }
-
-        .info-card {
-            background: #f9fafb;
-            padding: 24px;
-            border-radius: 12px;
-            border: 2px solid #e5e7eb;
-        }
-
-        .info-icon {
-            font-size: 32px;
-            margin-bottom: 12px;
-        }
-
-        .info-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: #374151;
             margin-bottom: 8px;
         }
 
-        .info-desc {
-            font-size: 14px;
+        .header p {
             color: #6b7280;
-            line-height: 1.5;
+            font-size: 16px;
         }
 
-        .badge {
-            display: inline-block;
-            background: #dbeafe;
-            color: #1e40af;
-            padding: 6px 16px;
-            border-radius: 20px;
+        /* Year Selector */
+        .year-selector {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .year-selector label {
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .year-selector select {
+            padding: 8px 16px;
+            font-size: 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .year-selector select:hover {
+            border-color: #3b82f6;
+        }
+
+        /* Dashboard */
+        .dashboard {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .dashboard h2 {
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .dashboard-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.15);
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-label {
             font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+        }
+
+        /* Month Filter */
+        .month-filter {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .month-filter h3 {
+            margin-bottom: 15px;
+            color: #111827;
+        }
+
+        .month-checkboxes {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .month-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .month-checkbox input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .month-checkbox label {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
             font-weight: 500;
-            margin-top: 24px;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-secondary {
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        .btn-secondary:hover {
+            background: #d1d5db;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .range-input {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .range-input input {
+            padding: 8px 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            width: 100px;
+        }
+
+        /* Items List */
+        .items-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .items-section {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .items-section h3 {
+            margin-bottom: 15px;
+            color: #111827;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .items-list {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .item {
+            padding: 15px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .item:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 2px 4px rgba(59,130,246,0.2);
+        }
+
+        .item.selected {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+
+        .item-name {
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .item-details {
+            display: flex;
+            justify-content: space-between;
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .item-amount {
+            font-weight: 600;
+            color: #10b981;
+            font-size: 16px;
+        }
+
+        .expense .item-amount {
+            color: #ef4444;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #9ca3af;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            color: #111827;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 20px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .radio-option input[type="radio"] {
+            width: 18px;
+            height: 18px;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+        }
+
+        .error-message {
+            background: #fef2f2;
+            color: #dc2626;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            border-left: 4px solid #dc2626;
+        }
+
+        @media (max-width: 768px) {
+            .items-container {
+                grid-template-columns: 1fr;
+            }
+
+            .month-checkboxes {
+                grid-template-columns: repeat(3, 1fr);
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="icon">💰</div>
-        <h1>Budget Planner</h1>
-        <p class="subtitle">Your comprehensive financial planning tool</p>
-        
-        <div class="badge">📊 Planning Tool</div>
-        
-        <div class="info-grid">
-            <div class="info-card">
-                <div class="info-icon">📈</div>
-                <div class="info-title">Income Tracking</div>
-                <div class="info-desc">Monitor all your income sources in one place</div>
-            </div>
-            <div class="info-card">
-                <div class="info-icon">💳</div>
-                <div class="info-title">Expense Management</div>
-                <div class="info-desc">Track and categorize your spending habits</div>
-            </div>
-            <div class="info-card">
-                <div class="info-icon">🎯</div>
-                <div class="info-title">Goal Setting</div>
-                <div class="info-desc">Set and achieve your financial goals</div>
-            </div>
-            <div class="info-card">
-                <div class="info-icon">📊</div>
-                <div class="info-title">Visual Reports</div>
-                <div class="info-desc">Beautiful charts and insights</div>
+        <div class="header">
+            <h1>💰 Budget Planner</h1>
+            <p>Manage your income and expenses effectively</p>
+        </div>
+
+        <!-- Year Selector -->
+        <div class="year-selector">
+            <label for="year-select">Select Year:</label>
+            <select id="year-select">
+                <option value="">Loading...</option>
+            </select>
+        </div>
+
+        <!-- Dashboard -->
+        <div class="dashboard">
+            <h2>Annual Overview</h2>
+            <div class="dashboard-stats">
+                <div class="stat-card">
+                    <div class="stat-label">Total Income</div>
+                    <div class="stat-value" id="total-income">$0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Expense</div>
+                    <div class="stat-value" id="total-expense">$0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Surplus</div>
+                    <div class="stat-value" id="total-surplus">$0</div>
+                </div>
             </div>
         </div>
+
+        <!-- Month Filter -->
+        <div class="month-filter">
+            <h3>Filter by Month</h3>
+            <div class="month-checkboxes" id="month-checkboxes"></div>
+            <div class="filter-actions">
+                <button class="btn btn-secondary" onclick="selectAllMonths()">Select All</button>
+                <button class="btn btn-secondary" onclick="deselectAllMonths()">Clear All</button>
+                <div class="range-input">
+                    <span>Range:</span>
+                    <input type="text" id="month-range" placeholder="e.g. 1-3">
+                    <button class="btn btn-primary" onclick="applyMonthRange()">Apply</button>
+                </div>
+                <button class="btn btn-primary" onclick="refreshItems()">Refresh</button>
+            </div>
+        </div>
+
+        <!-- Items List -->
+        <div class="items-container">
+            <div class="items-section">
+                <h3>📈 Income Items</h3>
+                <div class="items-list" id="income-items">
+                    <div class="loading">Loading income items...</div>
+                </div>
+            </div>
+            <div class="items-section">
+                <h3>💳 Expense Items</h3>
+                <div class="items-list" id="expense-items">
+                    <div class="loading">Loading expense items...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <button class="btn btn-success" onclick="openAddModal()">➕ Add Item</button>
+            <button class="btn btn-primary" onclick="openEditModal()">✏️ Edit Item</button>
+            <button class="btn btn-danger" onclick="deleteSelectedItem()">🗑️ Delete Item</button>
+        </div>
     </div>
+
+    <!-- Modal for Add/Edit -->
+    <div class="modal" id="item-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Add Budget Item</h2>
+            </div>
+            <div id="modal-error"></div>
+            <form id="item-form">
+                <div class="form-group">
+                    <label for="item-name">Item Name *</label>
+                    <input type="text" id="item-name" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Scope *</label>
+                    <div class="radio-group">
+                        <div class="radio-option">
+                            <input type="radio" id="scope-permanent" name="scope-type" value="permanent" checked>
+                            <label for="scope-permanent">Permanent</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="scope-specific" name="scope-type" value="specific">
+                            <label for="scope-specific">Specific Date</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group" id="date-fields" style="display:none;">
+                    <label for="scope-year">Year</label>
+                    <input type="number" id="scope-year" min="2020" max="2035">
+                    <label for="scope-month" style="margin-top:10px;">Month (optional)</label>
+                    <input type="number" id="scope-month" min="1" max="12" placeholder="1-12">
+                </div>
+
+                <div class="form-group">
+                    <label>Time Type *</label>
+                    <div class="radio-group">
+                        <div class="radio-option">
+                            <input type="radio" id="time-monthly" name="time-type" value="月度" checked>
+                            <label for="time-monthly">Monthly</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="time-onetime" name="time-type" value="非月度">
+                            <label for="time-onetime">One-time</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Category *</label>
+                    <div class="radio-group">
+                        <div class="radio-option">
+                            <input type="radio" id="category-income" name="category" value="收入" checked>
+                            <label for="category-income">Income</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="category-expense" name="category" value="支出">
+                            <label for="category-expense">Expense</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="item-amount">Amount ($) *</label>
+                    <input type="number" id="item-amount" step="0.01" required>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-success" id="submit-btn">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let currentYear = new Date().getFullYear();
+        let availableYears = [];
+        let selectedItem = null;
+        let isEditMode = false;
+        let token = localStorage.getItem('token');
+
+        // Month names
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+        // Listen for token from parent window (when loaded in iframe)
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'AUTH_TOKEN') {
+                token = event.data.token;
+                console.log('✅ Token received from parent window');
+                
+                // If page was waiting for token, initialize now
+                if (!document.getElementById('year-select').options.length || 
+                    document.getElementById('year-select').options[0].text === 'Loading...') {
+                    initializeApp();
+                }
+            }
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Wait a bit for parent window to send token (if in iframe)
+            setTimeout(() => {
+                if (!token) {
+                    // Show error message instead of redirecting
+                    document.body.innerHTML = `
+                        <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #f9fafb;">
+                            <div style="background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; max-width: 500px;">
+                                <div style="font-size: 48px; margin-bottom: 20px;">🔒</div>
+                                <h2 style="color: #111827; margin-bottom: 10px;">Authentication Required</h2>
+                                <p style="color: #6b7280; margin-bottom: 20px;">Please log in to access Budget Planner</p>
+                                <button onclick="if(window.parent !== window) window.parent.location.href='/'; else window.location.href='/';" style="background: #3b82f6; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px;">
+                                    Go to Login Page
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                initializeApp();
+            }, 500); // Wait 500ms for token from parent
+        });
+
+        function initializeApp() {
+            try {
+                initializeMonthCheckboxes();
+                loadBudgetInfo();
+                setupEventListeners();
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showError(`Initialization failed: ${error.message}`);
+            }
+        }
+
+        function setupEventListeners() {
+            // Year selector
+            document.getElementById('year-select').addEventListener('change', (e) => {
+                currentYear = parseInt(e.target.value);
+                loadDashboard();
+                refreshItems();
+            });
+
+            // Scope type radio buttons
+            document.querySelectorAll('input[name="scope-type"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    const dateFields = document.getElementById('date-fields');
+                    if (e.target.value === 'specific') {
+                        dateFields.style.display = 'block';
+                        // Set default values to current date
+                        const now = new Date();
+                        document.getElementById('scope-year').value = now.getFullYear();
+                        document.getElementById('scope-month').value = now.getMonth() + 1;
+                    } else {
+                        dateFields.style.display = 'none';
+                    }
+                });
+            });
+
+            // Form submit
+            document.getElementById('item-form').addEventListener('submit', handleFormSubmit);
+        }
+
+        function initializeMonthCheckboxes() {
+            const container = document.getElementById('month-checkboxes');
+            container.innerHTML = '';
+            
+            for (let i = 1; i <= 12; i++) {
+                const div = document.createElement('div');
+                div.className = 'month-checkbox';
+                div.innerHTML = `
+                    <input type="checkbox" id="month-${i}" value="${i}" checked>
+                    <label for="month-${i}">${monthNames[i-1]}</label>
+                `;
+                container.appendChild(div);
+            }
+        }
+
+        function selectAllMonths() {
+            document.querySelectorAll('#month-checkboxes input[type="checkbox"]').forEach(cb => cb.checked = true);
+        }
+
+        function deselectAllMonths() {
+            document.querySelectorAll('#month-checkboxes input[type="checkbox"]').forEach(cb => cb.checked = false);
+        }
+
+        function applyMonthRange() {
+            const range = document.getElementById('month-range').value.trim();
+            if (!range) return;
+
+            const match = range.match(/^(\d+)-(\d+)$/);
+            if (!match) {
+                alert('Please enter a valid range (e.g., 1-3)');
+                return;
+            }
+
+            const start = parseInt(match[1]);
+            const end = parseInt(match[2]);
+
+            if (start < 1 || end > 12 || start > end) {
+                alert('Invalid month range. Please enter values between 1-12.');
+                return;
+            }
+
+            // Uncheck all first
+            deselectAllMonths();
+
+            // Check range
+            for (let i = start; i <= end; i++) {
+                document.getElementById(`month-${i}`).checked = true;
+            }
+
+            document.getElementById('month-range').value = '';
+        }
+
+        function getSelectedMonths() {
+            const selected = [];
+            document.querySelectorAll('#month-checkboxes input[type="checkbox"]:checked').forEach(cb => {
+                selected.push(parseInt(cb.value));
+            });
+            return selected.length === 12 ? null : selected;
+        }
+
+        async function loadBudgetInfo() {
+            try {
+                const response = await fetch('/api/budget/info', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.status === 401) {
+                    // Token expired or invalid
+                    localStorage.removeItem('token');
+                    document.body.innerHTML = `
+                        <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #f9fafb;">
+                            <div style="background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; max-width: 500px;">
+                                <div style="font-size: 48px; margin-bottom: 20px;">⏱️</div>
+                                <h2 style="color: #111827; margin-bottom: 10px;">Session Expired</h2>
+                                <p style="color: #6b7280; margin-bottom: 20px;">Your session has expired. Please log in again.</p>
+                                <button onclick="window.location.href='/'" style="background: #3b82f6; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px;">
+                                    Go to Login Page
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                availableYears = data.available_years || [];
+
+                // Populate year selector
+                const yearSelect = document.getElementById('year-select');
+                yearSelect.innerHTML = '';
+                
+                // Build years list:
+                // 1. Include current year (always)
+                // 2. Include all years from available_years
+                const yearsSet = new Set();
+                
+                // Always add current year
+                yearsSet.add(currentYear);
+                
+                // Add all available years (years with data)
+                availableYears.forEach(year => yearsSet.add(year));
+                
+                // Convert to sorted array
+                const years = Array.from(yearsSet).sort((a, b) => b - a); // Descending order
+                
+                // Default to current year if no data
+                if (availableYears.length === 0) {
+                    currentYear = new Date().getFullYear();
+                }
+
+                // Populate dropdown
+                years.forEach(year => {
+                    const option = document.createElement('option');
+                    option.value = year;
+                    
+                    // Mark years with data
+                    if (availableYears.includes(year)) {
+                        option.textContent = `${year} ✓`;
+                    } else {
+                        option.textContent = year;
+                    }
+                    
+                    if (year === currentYear) option.selected = true;
+                    yearSelect.appendChild(option);
+                });
+
+                // Load dashboard and items
+                await loadDashboard();
+                await refreshItems();
+
+            } catch (error) {
+                console.error('Error loading budget info:', error);
+                showError(`Failed to load budget information: ${error.message}`);
+            }
+        }
+
+        async function loadDashboard() {
+            try {
+                const response = await fetch(`/api/budget/dashboard?year=${currentYear}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to load dashboard');
+
+                const data = await response.json();
+
+                document.getElementById('total-income').textContent = `$${data.total_income.toFixed(2)}`;
+                document.getElementById('total-expense').textContent = `$${data.total_expense.toFixed(2)}`;
+                document.getElementById('total-surplus').textContent = `$${data.total_surplus.toFixed(2)}`;
+
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                showError('Failed to load dashboard');
+            }
+        }
+
+        async function refreshItems() {
+            const months = getSelectedMonths();
+            const monthsParam = months ? months.join(',') : 'all';
+
+            try {
+                const response = await fetch(`/api/budget/items?year=${currentYear}&months=${monthsParam}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to load items');
+
+                const data = await response.json();
+
+                renderItems('income-items', data.income_items, 'income');
+                renderItems('expense-items', data.expense_items, 'expense');
+
+            } catch (error) {
+                console.error('Error loading items:', error);
+                showError('Failed to load items');
+            }
+        }
+
+        function renderItems(containerId, items, type) {
+            const container = document.getElementById(containerId);
+            
+            if (items.length === 0) {
+                container.innerHTML = '<div class="empty-state">No items found</div>';
+                return;
+            }
+
+            container.innerHTML = items.map(item => `
+                <div class="item ${type}" data-id="${item.id}" onclick="selectItem('${item.id}')">
+                    <div class="item-name">${item.name}</div>
+                    <div class="item-details">
+                        <span>${item.scope} | ${item.time_type === '月度' ? 'Monthly' : 'One-time'}</span>
+                        <span class="item-amount">$${parseFloat(item.amount).toFixed(2)}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function selectItem(itemId) {
+            // Remove previous selection
+            document.querySelectorAll('.item').forEach(el => el.classList.remove('selected'));
+            
+            // Add selection to clicked item
+            const item = document.querySelector(`[data-id="${itemId}"]`);
+            if (item) {
+                item.classList.add('selected');
+                selectedItem = itemId;
+            }
+        }
+
+        function openAddModal() {
+            isEditMode = false;
+            selectedItem = null;
+            document.getElementById('modal-title').textContent = 'Add Budget Item';
+            document.getElementById('submit-btn').textContent = 'Add Item';
+            document.getElementById('item-form').reset();
+            document.getElementById('date-fields').style.display = 'none';
+            
+            // Set default date to current date
+            const now = new Date();
+            document.getElementById('scope-year').value = now.getFullYear();
+            document.getElementById('scope-month').value = now.getMonth() + 1;
+            
+            document.getElementById('modal-error').innerHTML = '';
+            document.getElementById('item-modal').classList.add('active');
+        }
+
+        async function openEditModal() {
+            if (!selectedItem) {
+                alert('Please select an item to edit');
+                return;
+            }
+
+            try {
+                // Fetch full item data
+                const response = await fetch(`/api/budget/info?year=${currentYear}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to load item data');
+
+                const data = await response.json();
+                const item = data.items.find(i => i.id === selectedItem);
+
+                if (!item) {
+                    alert('Item not found');
+                    return;
+                }
+
+                // Fill form
+                isEditMode = true;
+                document.getElementById('modal-title').textContent = 'Edit Budget Item';
+                document.getElementById('submit-btn').textContent = 'Update Item';
+                
+                document.getElementById('item-name').value = item.name;
+                document.getElementById('item-amount').value = item.amount;
+
+                // Scope
+                if (item.scope === '永久') {
+                    document.getElementById('scope-permanent').checked = true;
+                    document.getElementById('date-fields').style.display = 'none';
+                } else {
+                    document.getElementById('scope-specific').checked = true;
+                    document.getElementById('date-fields').style.display = 'block';
+                    
+                    const yearMatch = item.scope.match(/(\d{4})年/);
+                    if (yearMatch) {
+                        document.getElementById('scope-year').value = yearMatch[1];
+                    }
+                    
+                    const monthMatch = item.scope.match(/(\d{1,2})月/);
+                    if (monthMatch) {
+                        document.getElementById('scope-month').value = monthMatch[1];
+                    }
+                }
+
+                // Time type
+                if (item.time_type === '月度') {
+                    document.getElementById('time-monthly').checked = true;
+                } else {
+                    document.getElementById('time-onetime').checked = true;
+                }
+
+                // Category
+                if (item.category === '收入') {
+                    document.getElementById('category-income').checked = true;
+                } else {
+                    document.getElementById('category-expense').checked = true;
+                }
+
+                document.getElementById('modal-error').innerHTML = '';
+                document.getElementById('item-modal').classList.add('active');
+
+            } catch (error) {
+                console.error('Error loading item for edit:', error);
+                alert('Failed to load item data');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('item-modal').classList.remove('active');
+            document.getElementById('item-form').reset();
+            selectedItem = null;
+            isEditMode = false;
+        }
+
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+
+            const name = document.getElementById('item-name').value.trim();
+            const amount = parseFloat(document.getElementById('item-amount').value);
+
+            // Build scope
+            let scope;
+            const scopeType = document.querySelector('input[name="scope-type"]:checked').value;
+            if (scopeType === 'permanent') {
+                scope = '永久';
+            } else {
+                const year = document.getElementById('scope-year').value;
+                const month = document.getElementById('scope-month').value;
+                scope = month ? `${year}年${month}月` : `${year}年`;
+            }
+
+            const timeType = document.querySelector('input[name="time-type"]:checked').value;
+            const category = document.querySelector('input[name="category"]:checked').value;
+
+            const itemData = { name, scope, time_type: timeType, category, amount };
+
+            try {
+                let response;
+                if (isEditMode) {
+                    response = await fetch(`/api/budget/items/${selectedItem}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(itemData)
+                    });
+                } else {
+                    response = await fetch('/api/budget/items', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(itemData)
+                    });
+                }
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to save item');
+                }
+
+                const result = await response.json();
+                
+                closeModal();
+                loadBudgetInfo();
+                alert(result.message || 'Item saved successfully');
+
+            } catch (error) {
+                console.error('Error saving item:', error);
+                document.getElementById('modal-error').innerHTML = 
+                    `<div class="error-message">${error.message}</div>`;
+            }
+        }
+
+        async function deleteSelectedItem() {
+            if (!selectedItem) {
+                alert('Please select an item to delete');
+                return;
+            }
+
+            if (!confirm('Are you sure you want to delete this item?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/budget/items/${selectedItem}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to delete item');
+
+                const result = await response.json();
+                
+                selectedItem = null;
+                loadBudgetInfo();
+                alert(result.message || 'Item deleted successfully');
+
+            } catch (error) {
+                console.error('Error deleting item:', error);
+                alert('Failed to delete item');
+            }
+        }
+
+        function showError(message) {
+            // Create a more visible error message
+            const errorDiv = document.createElement('div');
+            errorDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #fee2e2;
+                border: 2px solid #ef4444;
+                color: #991b1b;
+                padding: 16px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                z-index: 10000;
+                max-width: 400px;
+                animation: slideIn 0.3s ease-out;
+            `;
+            errorDiv.innerHTML = `
+                <strong>Error:</strong> ${message}
+                <button onclick="this.parentElement.remove()" style="
+                    background: transparent;
+                    border: none;
+                    color: #991b1b;
+                    cursor: pointer;
+                    float: right;
+                    font-size: 20px;
+                    line-height: 1;
+                    margin-left: 10px;
+                ">&times;</button>
+            `;
+            document.body.appendChild(errorDiv);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (errorDiv.parentElement) {
+                    errorDiv.remove();
+                }
+            }, 5000);
+            
+            console.error('Error:', message);
+        }
+    </script>
 </body>
 </html>
-

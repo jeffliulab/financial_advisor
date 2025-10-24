@@ -25,6 +25,30 @@ main.py - FastAPI 主服务入口
    输入: session_id, Authorization Header
    输出: [{id, role, content, created_at, session_id}, ...]
 
+6. GET /api/budget/dashboard  [需要认证]
+   输入: year, Authorization Header
+   输出: {year, total_income, total_expense, total_surplus, ...}
+
+7. GET /api/budget/items  [需要认证]
+   输入: year, months?, Authorization Header
+   输出: {income_items: [...], expense_items: [...]}
+
+8. POST /api/budget/items  [需要认证]
+   输入: {name, scope, time_type, category, amount}, Authorization Header
+   输出: {success, message, item_id}
+
+9. PUT /api/budget/items/{item_id}  [需要认证]
+   输入: {name?, scope?, time_type?, category?, amount?}, Authorization Header
+   输出: {success, message, item}
+
+10. DELETE /api/budget/items/{item_id}  [需要认证]
+    输入: item_id, Authorization Header
+    输出: {success, message}
+
+11. GET /api/budget/info  [需要认证]
+    输入: year?, Authorization Header
+    输出: {items: [...], available_years: [...]}
+
 【功能模块】
   - FastAPI路由和中间件
   - JWT Token认证
@@ -37,6 +61,7 @@ main.py - FastAPI 主服务入口
   - register.py (用户注册)
   - chat.py (AI对话)
   - chat_history.py (历史管理)
+  - brain/tools/budget_planner.py (预算规划)
 
 【启动方式】
   python main.py
@@ -59,6 +84,26 @@ import auth
 import register
 import chat
 import chat_history
+
+# 导入budget planner模块
+import sys
+from pathlib import Path
+brain_tools_path = Path(__file__).parent.parent / "brain" / "tools"
+sys.path.insert(0, str(brain_tools_path))
+
+try:
+    from budget_planner import (
+        get_user_budget_info,
+        add_budget_item,
+        update_budget_item,
+        delete_budget_item,
+        calculate_dashboard,
+        get_items_by_month
+    )
+    BUDGET_PLANNER_AVAILABLE = True
+except ImportError:
+    BUDGET_PLANNER_AVAILABLE = False
+    print("⚠️  Warning: Budget Planner module not available")
 
 
 # ============================================================================
@@ -431,6 +476,296 @@ async def get_config(current_user: dict = Depends(get_current_user)):
 
 
 # ============================================================================
+#                               Budget Planner API
+# ============================================================================
+
+class BudgetItemRequest(BaseModel):
+    """添加预算项目请求"""
+    name: str
+    scope: str  # "永久" 或 "2025年12月" 或 "2025年"
+    time_type: str  # "月度" 或 "非月度"
+    category: str  # "收入" 或 "支出"
+    amount: float
+
+
+class BudgetItemUpdateRequest(BaseModel):
+    """更新预算项目请求"""
+    name: Optional[str] = None
+    scope: Optional[str] = None
+    time_type: Optional[str] = None
+    category: Optional[str] = None
+    amount: Optional[float] = None
+
+
+@app.get("/api/budget/dashboard", tags=["预算规划"])
+async def get_budget_dashboard(
+    year: int,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    获取指定年份的Dashboard统计数据
+    
+    Args:
+        year: 年份
+        current_user: 当前用户
+        
+    Returns:
+        dict: Dashboard统计数据
+    """
+    if not BUDGET_PLANNER_AVAILABLE:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Budget Planner service not available"
+        )
+    
+    username = current_user["username"]
+    
+    try:
+        dashboard_data = calculate_dashboard(username, year)
+        return dashboard_data
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to calculate dashboard: {str(e)}"
+        )
+
+
+@app.get("/api/budget/items", tags=["预算规划"])
+async def get_budget_items(
+    year: int,
+    months: Optional[str] = "all",
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    获取指定年份和月份的预算项目
+    
+    Args:
+        year: 年份
+        months: 月份列表（逗号分隔，如 "1,2,3"），"all" 表示所有月份
+        current_user: 当前用户
+        
+    Returns:
+        dict: 预算项目列表
+    """
+    if not BUDGET_PLANNER_AVAILABLE:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Budget Planner service not available"
+        )
+    
+    username = current_user["username"]
+    
+    # 解析月份参数
+    month_list = None
+    if months != "all":
+        try:
+            month_list = [int(m.strip()) for m in months.split(",")]
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid months parameter"
+            )
+    
+    try:
+        items_data = get_items_by_month(username, year, month_list)
+        return items_data
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get items: {str(e)}"
+        )
+
+
+@app.post("/api/budget/items", tags=["预算规划"])
+async def add_budget_item_api(
+    request: BudgetItemRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    添加预算项目
+    
+    Args:
+        request: 预算项目数据
+        current_user: 当前用户
+        
+    Returns:
+        dict: 操作结果
+    """
+    if not BUDGET_PLANNER_AVAILABLE:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Budget Planner service not available"
+        )
+    
+    username = current_user["username"]
+    
+    # 构建项目数据
+    item = {
+        "name": request.name,
+        "scope": request.scope,
+        "time_type": request.time_type,
+        "category": request.category,
+        "amount": request.amount
+    }
+    
+    try:
+        result = add_budget_item(username, item)
+        
+        if not result["success"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=result["message"]
+            )
+        
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to add item: {str(e)}"
+        )
+
+
+@app.delete("/api/budget/items/{item_id}", tags=["预算规划"])
+async def delete_budget_item_api(
+    item_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    删除预算项目
+    
+    Args:
+        item_id: 项目ID
+        current_user: 当前用户
+        
+    Returns:
+        dict: 操作结果
+    """
+    if not BUDGET_PLANNER_AVAILABLE:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Budget Planner service not available"
+        )
+    
+    username = current_user["username"]
+    
+    try:
+        result = delete_budget_item(username, item_id)
+        
+        if not result["success"]:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=result["message"]
+            )
+        
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete item: {str(e)}"
+        )
+
+
+@app.put("/api/budget/items/{item_id}", tags=["预算规划"])
+async def update_budget_item_api(
+    item_id: str,
+    request: BudgetItemUpdateRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    更新预算项目
+    
+    Args:
+        item_id: 项目ID
+        request: 更新的预算项目数据
+        current_user: 当前用户
+        
+    Returns:
+        dict: 操作结果
+    """
+    if not BUDGET_PLANNER_AVAILABLE:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Budget Planner service not available"
+        )
+    
+    username = current_user["username"]
+    
+    # 构建更新数据（只包含非None的字段）
+    updates = {}
+    if request.name is not None:
+        updates["name"] = request.name
+    if request.scope is not None:
+        updates["scope"] = request.scope
+    if request.time_type is not None:
+        updates["time_type"] = request.time_type
+    if request.category is not None:
+        updates["category"] = request.category
+    if request.amount is not None:
+        updates["amount"] = request.amount
+    
+    if not updates:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No fields to update"
+        )
+    
+    try:
+        result = update_budget_item(username, item_id, updates)
+        
+        if not result["success"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=result["message"]
+            )
+        
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update item: {str(e)}"
+        )
+
+
+@app.get("/api/budget/info", tags=["预算规划"])
+async def get_budget_info(
+    year: Optional[int] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    获取用户的预算信息（包含所有项目和可用年份）
+    
+    Args:
+        year: 年份（可选）
+        current_user: 当前用户
+        
+    Returns:
+        dict: 预算信息
+    """
+    if not BUDGET_PLANNER_AVAILABLE:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Budget Planner service not available"
+        )
+    
+    username = current_user["username"]
+    
+    try:
+        budget_info = get_user_budget_info(username, year)
+        return budget_info
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get budget info: {str(e)}"
+        )
+
+
+# ============================================================================
 #                               UI动态控制系统
 # ============================================================================
 
@@ -747,38 +1082,42 @@ async def serve_index():
 # ============================================================================
 
 if __name__ == "__main__":
-    print("""
-    ╔══════════════════════════════════════════════════════════════╗
-    ║         AI Financial Advisor API Server                     ║
-    ║              Powered by DeepSeek AI                          ║
-    ║                     Starting...                              ║
-    ╚══════════════════════════════════════════════════════════════╝
-    """)
+    # Set UTF-8 encoding for Windows console
+    if sys.platform == 'win32':
+        import codecs
+        sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
+        sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
+    
+    print("=" * 60)
+    print("AI Financial Advisor API Server")
+    print("Powered by DeepSeek AI")
+    print("Starting...")
+    print("=" * 60)
     
     # 显示配置信息
-    print("📋 DeepSeek API Configuration:")
+    print("\nDeepSeek API Configuration:")
     ai_config = chat.get_ai_config()
     print(f"   API Base URL: {ai_config['api_base_url']}")
     print(f"   Model: {ai_config['model']}")
     print(f"   Temperature: {ai_config['temperature']}")
     print(f"   Max Tokens: {ai_config['max_tokens']}")
-    print(f"   API Key: {'Configured ✓' if ai_config['api_key_configured'] else 'Not Configured ✗'}")
+    print(f"   API Key: {'Configured' if ai_config['api_key_configured'] else 'Not Configured'}")
     
     # 测试DeepSeek连接
-    print("\n🔌 Testing DeepSeek API Connection...")
+    print("\nTesting DeepSeek API Connection...")
     test_result = chat.test_ai_connection()
     if test_result['success']:
-        print(f"   ✓ {test_result['message']}")
+        print(f"   Success: {test_result['message']}")
     else:
-        print(f"   ✗ {test_result['message']}")
-        print("\n⚠️  Warning: DeepSeek API not properly configured, chat functionality may not work")
+        print(f"   Failed: {test_result['message']}")
+        print("\nWarning: DeepSeek API not properly configured, chat functionality may not work")
         print("   Please set the following environment variables in .env file:")
         print("   - DEEPSEEK_API_KEY: Your DeepSeek API key")
         print("   - DEEPSEEK_BASE_URL: API base URL (optional, usually no need to modify)")
         print("   - DEEPSEEK_MODEL: Model name (optional, usually no need to modify)")
         print("\n   Get API key: https://platform.deepseek.com/")
     
-    print("\n🚀 Server Starting...")
+    print("\nServer Starting...")
     print("   Access URL: http://localhost:8000")
     print("   API Docs: http://localhost:8000/docs")
     print("   Frontend: http://localhost:8000/")

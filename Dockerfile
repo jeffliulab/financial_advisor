@@ -16,6 +16,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 复制项目文件
 COPY server/ ./server/
 COPY web/ ./web/
+COPY brain/ ./brain/
 
 # 创建数据目录
 RUN mkdir -p data/users

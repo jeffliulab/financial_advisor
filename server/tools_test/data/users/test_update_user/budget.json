@@ -1,0 +1,13 @@
+{
+  "items": [
+    {
+      "name": "Test Salary",
+      "scope": "永久",
+      "time_type": "月度",
+      "category": "收入",
+      "amount": 5000.0,
+      "id": "item_20251024_022018_0",
+      "created_at": "2025-10-24T02:20:18.255533"
+    }
+  ]
+}
