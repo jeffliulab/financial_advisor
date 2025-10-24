@@ -431,20 +431,247 @@ async def get_config(current_user: dict = Depends(get_current_user)):
 
 
 # ============================================================================
-#                               Dashboard端点
+#                               UI动态控制系统
+# ============================================================================
+
+# 全局命令队列（生产环境应使用Redis等持久化方案）
+ui_command_queue = []
+current_ui_state = {
+    "dashboard_active": False,
+    "current_tool": None,
+    "layout_mode": "two-column"
+}
+
+class UICommandRequest(BaseModel):
+    """UI命令请求"""
+    command: str
+    params: dict = {}
+
+class UIEventRequest(BaseModel):
+    """UI事件请求（前端按钮点击等）"""
+    event_type: str
+    event_data: dict = {}
+
+@app.post("/api/ui/command", tags=["UI控制"])
+async def send_ui_command(request: UICommandRequest):
+    """
+    发送UI控制命令（无需认证，供Agent/脚本调用）
+    
+    来自后端的命令会生成到队列，供前端轮询执行
+    
+    Args:
+        request: UI命令请求
+        
+    Returns:
+        dict: 命令结果
+    """
+    import uuid
+    from datetime import datetime
+    
+    # 验证命令类型
+    valid_commands = ["open_dashboard", "close_dashboard", "switch_session"]
+    if request.command not in valid_commands:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid command. Valid commands: {valid_commands}"
+        )
+    
+    # 生成命令ID
+    command_id = f"cmd_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
+    
+    # 构建命令对象
+    command = {
+        "command": request.command,
+        "params": request.params,
+        "timestamp": datetime.now().isoformat(),
+        "command_id": command_id,
+        "source": "backend"  # 标记来源：后端
+    }
+    
+    # 加入命令队列（后端触发，需要前端执行）
+    ui_command_queue.append(command)
+    
+    # 更新状态
+    if request.command == "open_dashboard" and "tool" in request.params:
+        current_ui_state["dashboard_active"] = True
+        current_ui_state["current_tool"] = request.params["tool"]
+        current_ui_state["layout_mode"] = "three-column"
+    elif request.command == "close_dashboard":
+        current_ui_state["dashboard_active"] = False
+        current_ui_state["current_tool"] = None
+        current_ui_state["layout_mode"] = "two-column"
+    
+    return {
+        "success": True,
+        "message": "Command queued successfully",
+        "command_id": command_id,
+        "source": "backend"
+    }
+
+
+@app.post("/api/ui/event", tags=["UI控制"])
+async def handle_ui_event(request: UIEventRequest):
+    """
+    处理前端UI事件（按钮点击等）
+    
+    前端发送事件 -> 后端处理 -> 生成UI命令 -> 前端轮询执行
+    
+    Args:
+        request: UI事件请求
+        
+    Returns:
+        dict: 处理结果
+    """
+    import uuid
+    from datetime import datetime
+    
+    event_type = request.event_type
+    event_data = request.event_data
+    
+    # 事件处理逻辑
+    command = None
+    
+    if event_type == "button_click":
+        button_id = event_data.get("button_id")
+        
+        # 根据按钮ID生成对应的UI命令
+        if button_id == "budget-planner":
+            command = {
+                "command": "open_dashboard",
+                "params": {"tool": "budget-planner"}
+            }
+        elif button_id == "spending-analyzer":
+            command = {
+                "command": "open_dashboard",
+                "params": {"tool": "spending-analyzer"}
+            }
+        elif button_id == "investment-dashboard":
+            command = {
+                "command": "open_dashboard",
+                "params": {"tool": "investment-dashboard"}
+            }
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown button_id: {button_id}"
+            )
+    
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown event_type: {event_type}"
+        )
+    
+    # 如果生成了命令，加入队列
+    if command:
+        command_id = f"cmd_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
+        command["timestamp"] = datetime.now().isoformat()
+        command["command_id"] = command_id
+        command["source"] = "ui_event"
+        
+        ui_command_queue.append(command)
+        
+        # 更新状态
+        if command["command"] == "open_dashboard" and "tool" in command["params"]:
+            current_ui_state["dashboard_active"] = True
+            current_ui_state["current_tool"] = command["params"]["tool"]
+            current_ui_state["layout_mode"] = "three-column"
+        
+        return {
+            "success": True,
+            "message": "Event processed and command queued",
+            "command_id": command_id,
+            "command": command["command"]
+        }
+    
+    return {
+        "success": False,
+        "message": "Event processed but no command generated"
+    }
+
+
+@app.get("/api/ui/state", tags=["UI控制"])
+async def get_ui_state():
+    """
+    获取当前UI状态和待执行命令（前端轮询）
+    
+    Returns:
+        dict: UI状态和命令队列
+    """
+    # 返回队列中的所有待执行命令
+    pending = ui_command_queue.copy()
+    
+    # 清空队列（命令被前端获取后即删除）
+    ui_command_queue.clear()
+    
+    return {
+        "pending_commands": pending,
+        "current_state": current_ui_state
+    }
+
+
+class StateSyncRequest(BaseModel):
+    """状态同步请求"""
+    dashboard_active: bool = None
+    current_tool: str = None
+    layout_mode: str = None
+    source: str = "frontend"  # frontend 或 backend
+
+
+@app.post("/api/ui/state/sync", tags=["UI控制"])
+async def sync_ui_state(request: StateSyncRequest):
+    """
+    前端同步UI状态到后端
+    
+    用于前端立即响应场景（按钮点击）：
+    - 前端立即切换布局（0延迟）
+    - 同步状态到后端（source: frontend）
+    - 后端只记录状态，不生成命令（避免重复执行）
+    
+    Args:
+        request: 状态同步请求
+        
+    Returns:
+        dict: 同步结果
+    """
+    global current_ui_state
+    
+    # 更新状态（只更新非None的字段）
+    if request.dashboard_active is not None:
+        current_ui_state["dashboard_active"] = request.dashboard_active
+    if request.current_tool is not None:
+        current_ui_state["current_tool"] = request.current_tool
+    if request.layout_mode is not None:
+        current_ui_state["layout_mode"] = request.layout_mode
+    
+    # 关键：如果来自前端，不生成命令（前端已经执行了）
+    # 如果来自后端，这里也不应该调用（应该用 /api/ui/command）
+    
+    return {
+        "success": True,
+        "message": "State synced (no command generated)",
+        "current_state": current_ui_state,
+        "source": request.source
+    }
+
+
+# ============================================================================
+#                       Dashboard端点（已废弃，保留兼容）
 # ============================================================================
 
 class DashboardRequest(BaseModel):
-    """Dashboard激活请求"""
+    """Dashboard激活请求（已废弃）"""
     tool: str
 
-@app.post("/api/dashboard/activate", tags=["Dashboard"])
+@app.post("/api/dashboard/activate", tags=["Dashboard (已废弃)"])
 async def activate_dashboard(
     request: DashboardRequest,
     current_user: dict = Depends(get_current_user)
 ):
     """
-    激活Dashboard工具面板
+    激活Dashboard工具面板（已废弃）
+    
+    ⚠️ 此接口已废弃，请使用 POST /api/ui/command 或 POST /api/ui/event
     
     Args:
         request: Dashboard请求（工具名称）

@@ -163,68 +163,156 @@
 
 
 ================================================================================
-                          【Dashboard工具面板接口】
+                          【UI动态控制接口 - 新版】
 ================================================================================
 
-6. POST /api/dashboard/activate
+6. POST /api/ui/command
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   【功能】激活Dashboard工具面板，切换到三栏布局
+   【功能】发送UI布局切换指令（任何脚本都可调用，无需认证）
    【请求头】
       Content-Type: application/json
-      Authorization: Bearer {access_token}
    【请求体】
       {
-        "tool": "工具名称 (string, required)"
+        "command": "UI指令类型 (string, required)",
+        "params": {
+          // 指令参数（根据不同command而不同）
+        }
       }
-   【可用工具】
-      - "budget-planner": 预算规划工具
-      - "spending-analyzer": 支出分析工具
-      - "investment-dashboard": 投资仪表板（Coming Soon）
+   【可用指令】
+      1. 打开Dashboard三栏布局:
+         {
+           "command": "open_dashboard",
+           "params": {
+             "tool": "budget-planner | spending-analyzer | investment-dashboard"
+           }
+         }
+      
+      2. 关闭Dashboard恢复二栏:
+         {
+           "command": "close_dashboard",
+           "params": {}
+         }
+      
+      3. 切换到指定会话:
+         {
+           "command": "switch_session",
+           "params": {
+             "session_id": "会话ID"
+           }
+         }
+   
    【响应成功 200】
       {
-        "dashboard_active": true,
-        "tool_name": "工具名称 (string)",
-        "tool_title": "工具显示标题 (string)",
-        "tool_url": "工具页面URL (string) - 相对路径"
+        "success": true,
+        "message": "Command queued successfully",
+        "command_id": "指令ID (string)"
       }
    【响应失败 400】
       {
-        "detail": "Unknown tool: {tool_name}"
+        "success": false,
+        "error": "Invalid command or params"
       }
-   【响应失败 401】
-      {
-        "detail": "Unauthorized - 需要登录"
-      }
-   【调用位置】openDashboard() 函数 - 第1949-1980行
+   【前端轮询】
+      前端每2秒轮询一次 GET /api/ui/state 检查是否有新指令
+      检测到新指令后自动执行并更新UI状态
+   【调用位置】
+      - 前端轮询: pollUIState() 函数 (每2秒)
+      - 指令执行: executeUICommand() 函数
    【说明】
-      - 此接口用于激活三栏布局，在中间面板显示工具页面
-      - 前端接收响应后，会自动：
-        * 设置 dashboardActive = true
-        * 在iframe中加载工具页面
-        * 切换页面布局为三栏模式（侧边栏 + Dashboard + ChatBot）
-        * ChatBot宽度自动调整为400px
-      - 工具页面位于 /tools/ 目录下，作为独立HTML页面
-      - 可以通过closeDashboard()函数关闭Dashboard，恢复二栏布局
+      - 此接口设计为无认证，任何脚本都可以发送UI控制指令
+      - Agent/后端可以直接调用此接口控制前端布局
+      - 前端通过轮询方式自动检测并执行新指令
+      - 支持指令队列，多个指令按顺序执行
    【使用示例】
-      JavaScript调用:
-      ```javascript
-      await openDashboard('budget-planner');  // 打开预算规划工具
-      await openDashboard('spending-analyzer'); // 打开支出分析工具
+      Python调用示例:
+      ```python
+      import requests
+      
+      # 打开预算工具
+      requests.post('http://localhost:8000/api/ui/command', json={
+          "command": "open_dashboard",
+          "params": {"tool": "budget-planner"}
+      })
+      
+      # 关闭Dashboard
+      requests.post('http://localhost:8000/api/ui/command', json={
+          "command": "close_dashboard",
+          "params": {}
+      })
       ```
       
-      完整请求示例:
+      JavaScript调用示例:
       ```javascript
-      const response = await fetch('/api/dashboard/activate', {
+      // 任何脚本都可以直接调用
+      fetch('/api/ui/command', {
           method: 'POST',
-          headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer YOUR_TOKEN_HERE'
-          },
-          body: JSON.stringify({ tool: 'budget-planner' })
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+              command: 'open_dashboard',
+              params: {tool: 'spending-analyzer'}
+          })
       });
-      const data = await response.json();
-      // data.dashboard_active === true
-      // data.tool_url === '/tools/budget-planner.html'
+      ```
+
+
+7. GET /api/ui/state
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   【功能】获取当前UI状态和待执行指令（前端轮询使用）
+   【请求头】无（公开端点）
+   【请求参数】无
+   【响应成功 200】
+      {
+        "pending_commands": [
+          {
+            "command": "open_dashboard",
+            "params": {"tool": "budget-planner"},
+            "timestamp": "2025-10-24T12:00:00Z",
+            "command_id": "cmd_123"
+          }
+        ],
+        "current_state": {
+          "dashboard_active": false,
+          "current_tool": null,
+          "layout_mode": "two-column"
+        }
+      }
+   【说明】
+      - 前端通过轮询此接口检测新指令
+      - pending_commands 包含所有待执行的指令
+      - 前端执行完指令后，指令会自动从队列中移除
+      - 如果没有待执行指令，返回空数组
+
+
+================================================================================
+                  【Dashboard工具面板接口 - 已废弃 ⚠️】
+================================================================================
+
+⚠️ 以下接口已废弃，请使用新的 UI 动态控制接口 (POST /api/ui/command)
+
+8. POST /api/dashboard/activate [已废弃]
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   【状态】已废弃 - 请使用 POST /api/ui/command
+   【功能】激活Dashboard工具面板（旧版直接调用方式）
+   【迁移说明】
+      旧代码：
+      ```javascript
+      await fetch('/api/dashboard/activate', {
+          method: 'POST',
+          headers: {'Authorization': 'Bearer TOKEN'},
+          body: JSON.stringify({tool: 'budget-planner'})
+      });
+      ```
+      
+      新代码（推荐）：
+      ```javascript
+      await fetch('/api/ui/command', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+              command: 'open_dashboard',
+              params: {tool: 'budget-planner'}
+          })
+      });
       ```
 
 
@@ -1250,13 +1338,13 @@
                 </div>
                 <div class="sidebar-section">
                     <h3>Personal Tools</h3>
-                    <button class="sidebar-button" onclick="openDashboard('budget-planner')">
+                    <button class="sidebar-button" onclick="sendButtonEvent('budget-planner')">
                         💰 Budget Planner
                     </button>
-                    <button class="sidebar-button" onclick="openDashboard('spending-analyzer')">
+                    <button class="sidebar-button" onclick="sendButtonEvent('spending-analyzer')">
                         💳 Spending Analyzer
                     </button>
-                    <button class="sidebar-button" onclick="openDashboard('investment-dashboard')">
+                    <button class="sidebar-button" onclick="sendButtonEvent('investment-dashboard')">
                         📈 Investment Dashboard
                     </button>
                 </div>
@@ -1418,6 +1506,11 @@
         let isHistoryExpanded = false;
         let dashboardActive = false;
         let currentDashboardTool = null;
+        
+        // UI State Polling
+        let uiStatePollingInterval = null;
+        let lastProcessedCommandId = null;
+        const UI_POLL_INTERVAL = 2000; // 2 seconds
 
         // Authentication functions
         function showLoginForm() {
@@ -1534,6 +1627,9 @@
         }
 
         function logout() {
+            // Stop UI polling
+            stopUIStatePolling();
+            
             // Clear authentication data
             authToken = null;
             currentUser = null;
@@ -2016,39 +2112,247 @@
         }
 
         // ============================================================================
-        //                           Dashboard Management
+        //                      UI Dynamic Control System (新版)
         // ============================================================================
         
-        async function openDashboard(toolName) {
-            if (!authToken) {
-                alert('Please login to access tools.');
+        /**
+         * 发送按钮点击事件（立即执行 + 同步状态）
+         * @param {string} buttonId - 按钮ID
+         */
+        async function sendButtonEvent(buttonId) {
+            console.log(`🔘 Button Clicked: ${buttonId}`);
+            
+            // 工具配置
+            const toolConfig = {
+                "budget-planner": {
+                    title: "Budget Planner",
+                    url: "/tools/budget-planner.html"
+                },
+                "spending-analyzer": {
+                    title: "Spending Analyzer",
+                    url: "/tools/spending-analyzer.html"
+                },
+                "investment-dashboard": {
+                    title: "Investment Dashboard",
+                    url: "/tools/coming-soon.html"
+                }
+            };
+            
+            const config = toolConfig[buttonId];
+            if (!config) {
+                console.error(`❌ Unknown tool: ${buttonId}`);
                 return;
             }
             
+            // 🎯 第1步：立即本地切换（0ms延迟）
+            activateDashboard(buttonId, config.title, config.url);
+            console.log(`✅ Switched to: ${buttonId}`);
+            
+            // 🎯 第2步：同步状态到后端（source: frontend，不生成命令）
             try {
-                // Call backend API to get dashboard configuration
-                const response = await fetch('/api/dashboard/activate', {
+                const response = await fetch('/api/ui/state/sync', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        tool: toolName
+                        dashboard_active: true,
+                        current_tool: buttonId,
+                        layout_mode: 'three-column',
+                        source: 'frontend'
                     })
+                });
+                
+                if (response.ok) {
+                    console.log('✅ State synced to backend');
+                } else {
+                    console.warn('⚠️ State sync failed (UI already switched)');
+                }
+            } catch (error) {
+                console.error('❌ State sync error:', error);
+            }
+        }
+        
+        /**
+         * 启动UI状态轮询
+         * 每2秒检查一次是否有新的UI控制指令
+         */
+        function startUIStatePolling() {
+            if (uiStatePollingInterval) {
+                return; // 已经在轮询中
+            }
+            
+            console.log('🔄 UI State Polling Started');
+            
+            // 立即执行一次
+            pollUIState();
+            
+            // 设置定时轮询
+            uiStatePollingInterval = setInterval(() => {
+                pollUIState();
+            }, UI_POLL_INTERVAL);
+        }
+        
+        /**
+         * 停止UI状态轮询
+         */
+        function stopUIStatePolling() {
+            if (uiStatePollingInterval) {
+                clearInterval(uiStatePollingInterval);
+                uiStatePollingInterval = null;
+                console.log('⏸️ UI State Polling Stopped');
+            }
+        }
+        
+        /**
+         * 轮询UI状态
+         * 检查是否有待执行的指令
+         */
+        async function pollUIState() {
+            try {
+                const response = await fetch('/api/ui/state', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
                 });
                 
                 if (response.ok) {
                     const data = await response.json();
                     
-                    if (data.dashboard_active) {
-                        activateDashboard(data.tool_name, data.tool_title, data.tool_url);
+                    // 检查是否有待执行的指令
+                    if (data.pending_commands && data.pending_commands.length > 0) {
+                        for (const cmd of data.pending_commands) {
+                            // 避免重复执行同一条指令
+                            if (cmd.command_id !== lastProcessedCommandId) {
+                                console.log('🎯 New UI Command Received:', cmd);
+                                await executeUICommand(cmd);
+                                lastProcessedCommandId = cmd.command_id;
+                            }
+                        }
                     }
-                } else {
-                    console.error('Failed to activate dashboard:', response.status);
                 }
             } catch (error) {
-                console.error('Error activating dashboard:', error);
+                // 静默失败，避免控制台spam
+                // console.error('UI State Polling Error:', error);
+            }
+        }
+        
+        /**
+         * 执行UI控制指令
+         * @param {Object} command - 指令对象
+         */
+        async function executeUICommand(command) {
+            const { command: cmd, params } = command;
+            
+            console.log(`⚡ Executing Command: ${cmd}`, params);
+            
+            switch (cmd) {
+                case 'open_dashboard':
+                    if (params && params.tool) {
+                        const toolConfig = {
+                            "budget-planner": {
+                                title: "Budget Planner",
+                                url: "/tools/budget-planner.html"
+                            },
+                            "spending-analyzer": {
+                                title: "Spending Analyzer",
+                                url: "/tools/spending-analyzer.html"
+                            },
+                            "investment-dashboard": {
+                                title: "Investment Dashboard",
+                                url: "/tools/coming-soon.html"
+                            }
+                        };
+                        
+                        const config = toolConfig[params.tool];
+                        if (config) {
+                            activateDashboard(params.tool, config.title, config.url);
+                            console.log(`✅ Dashboard Opened: ${params.tool}`);
+                            
+                            // 同步状态到后端（标记来自frontend，避免再次生成命令）
+                            syncStateToBackend({
+                                dashboard_active: true,
+                                current_tool: params.tool,
+                                layout_mode: 'three-column'
+                            });
+                        } else {
+                            console.warn(`❌ Unknown tool: ${params.tool}`);
+                        }
+                    }
+                    break;
+                    
+                case 'close_dashboard':
+                    closeDashboard();
+                    console.log('✅ Dashboard Closed');
+                    break;
+                    
+                case 'switch_session':
+                    if (params && params.session_id) {
+                        await loadChatSession(params.session_id);
+                        console.log(`✅ Switched to Session: ${params.session_id}`);
+                    }
+                    break;
+                    
+                default:
+                    console.warn(`⚠️ Unknown command: ${cmd}`);
+            }
+        }
+        
+        /**
+         * 同步状态到后端（辅助函数）
+         * @param {Object} state - 状态对象
+         */
+        function syncStateToBackend(state) {
+            fetch('/api/ui/state/sync', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    ...state,
+                    source: 'frontend'
+                })
+            }).then(response => {
+                if (response.ok) {
+                    console.log('✅ State synced to backend');
+                }
+            }).catch(error => {
+                console.error('❌ State sync error:', error);
+            });
+        }
+        
+        // ============================================================================
+        //                  Dashboard Management (保留兼容旧代码)
+        // ============================================================================
+        
+        /**
+         * 打开Dashboard（旧版函数，保留兼容性）
+         * 建议使用新的 UI Command 系统
+         * @deprecated 请使用 POST /api/ui/command 替代
+         */
+        async function openDashboard(toolName) {
+            console.warn('⚠️ openDashboard() is deprecated. Please use UI Command System instead.');
+            
+            // 直接调用本地激活，不再调用后端
+            const toolConfig = {
+                "budget-planner": {
+                    title: "Budget Planner",
+                    url: "/tools/budget-planner.html"
+                },
+                "spending-analyzer": {
+                    title: "Spending Analyzer",
+                    url: "/tools/spending-analyzer.html"
+                },
+                "investment-dashboard": {
+                    title: "Investment Dashboard",
+                    url: "/tools/coming-soon.html"
+                }
+            };
+            
+            const config = toolConfig[toolName];
+            if (config) {
+                activateDashboard(toolName, config.title, config.url);
             }
         }
         
@@ -2086,6 +2390,13 @@
             dashboardFrame.src = 'about:blank';
             
             console.log('Dashboard closed');
+            
+            // 同步关闭状态到后端
+            syncStateToBackend({
+                dashboard_active: false,
+                current_tool: null,
+                layout_mode: 'two-column'
+            });
         }
         
         function toggleDashboard() {
@@ -2118,6 +2429,10 @@
             console.log('DOMContentLoaded - Calling checkAuth()');
             checkAuth();
             newChat();
+            
+            // 🎯 启动UI状态轮询（核心功能）
+            startUIStatePolling();
+            
             console.log('=== DOMContentLoaded END ===');
             
             
@@ -2153,6 +2468,65 @@
                 checkScrollable(fullChatHistoryList);
             }
         });
+        
+        // 监听页面可见性变化，优化轮询
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                // 页面不可见时可以选择停止轮询以节省资源
+                // stopUIStatePolling();
+                console.log('📴 Page Hidden (polling continues in background)');
+            } else {
+                // 页面可见时确保轮询正在运行
+                if (!uiStatePollingInterval) {
+                    startUIStatePolling();
+                }
+                console.log('👀 Page Visible - Polling Active');
+            }
+        });
+        
+        // ============================================================================
+        //                      开发者工具 - UI Command 测试
+        // ============================================================================
+        
+        /**
+         * 测试函数：手动发送UI指令
+         * 可在浏览器控制台直接调用
+         * 
+         * 使用示例：
+         * sendUICommand('open_dashboard', {tool: 'budget-planner'})
+         * sendUICommand('close_dashboard', {})
+         */
+        window.sendUICommand = async function(command, params = {}) {
+            try {
+                const response = await fetch('/api/ui/command', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        command: command,
+                        params: params
+                    })
+                });
+                
+                const result = await response.json();
+                console.log('✅ UI Command Sent:', result);
+                return result;
+            } catch (error) {
+                console.error('❌ Failed to send UI command:', error);
+                return { success: false, error: error.message };
+            }
+        };
+        
+        // 在控制台显示可用的测试命令
+        console.log('%c🎮 UI Command Test Functions Available:', 'color: #3b82f6; font-weight: bold; font-size: 14px;');
+        console.log('%csendUICommand(command, params)', 'color: #10a37f; font-weight: bold;');
+        console.log('');
+        console.log('Examples:');
+        console.log('  sendUICommand("open_dashboard", {tool: "budget-planner"})');
+        console.log('  sendUICommand("close_dashboard", {})');
+        console.log('  sendUICommand("switch_session", {session_id: "xxx"})');
+        console.log('');
     </script>
 </body>
 </html>

@@ -1,19 +1,26 @@
-# 在本页设计一个LangGraph AI Agent 
-# 升级方法：直接替换main.py中的：
-# # server/main.py 第305行
-# # 旧版本：
-# ai_response = chat.generate_response(
-#     request.message,
-#     context_messages
-# )
-# # 新版本：
-# ai_response = newage.generate_response(
-#     request.message,
-#     context_messages
-# )
 
+
+"""请不要删除或修改本注释区域的内容
+
+brain.py编辑好后替换很简单：
+
+在本页设计一个LangGraph AI Agent 
+升级方法：直接替换main.py中的：
+# server/main.py 第305行
+# 旧版本：
+ai_response = chat.generate_response(
+    request.message,
+    context_messages
+)
+# 新版本：
+ai_response = newage.generate_response(
+    request.message,
+    context_messages
+)
 """
-接入与返回的格式说明
+
+"""请不要删除或修改本注释区域的内容
+AI接入与返回的格式说明
 
     # 4. 调用AI生成回复
     ai_response = chat.generate_response(
@@ -36,3 +43,50 @@
             "usage": dict     # token使用情况
         }
 """
+
+
+
+"""请不要删除或修改本注释区域的内容
+页面形态相关API
+
+前端页面设置了动态监听接口
+
+获取UI状态：
+import requests
+
+# 获取当前UI状态
+response = requests.get('http://localhost:8000/api/ui/state')
+data = response.json()
+
+print(data['current_state'])
+# 输出: {'dashboard_active': True, 'current_tool': 'budget-planner', 'layout_mode': 'three-column'}
+
+控制UI布局：
+import requests
+
+# 打开工具（三栏布局）
+requests.post('http://localhost:8000/api/ui/command', json={
+    "command": "open_dashboard",
+    "params": {"tool": "budget-planner"}
+})
+
+# 关闭工具（恢复二栏）
+requests.post('http://localhost:8000/api/ui/command', json={
+    "command": "close_dashboard",
+    "params": {}
+})
+
+
+"""
+
+
+
+
+
+
+
+
+
+
+
+
